@@ -1,0 +1,20 @@
+#+title: Control de información para vehículos de CIETEL
+
+
+
+* Introducción
+Software para mantener un control (o al menos información actualizada) sobre los vehículos de CIETEL y sus respectivas reparaciones o mantenimientos.
+* Idea principal
+Un supervisor puede consultar la información de todos los vehículos de manera sencilla.
+Al principio, al menos lo siguiente:
+- Información del vehículo (marca, modelo, placas)
+- Última fecha de servicio
+- Registro de reparaciones
+- Técnico asignado
+
+Visible en una página compuesta por HTML y CSS sencillo.
+
+Esto conforma lo mínimo necesario para el funcionamiento más básico.
+* Ideas a futuro
+- Utilizar una tabla para mantener el registro de cada servicio, de esta manera, el supervisor tiene un record de todos los servicios, no solamente el último.
+-

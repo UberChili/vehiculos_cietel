@@ -24,7 +24,6 @@ func hello(w http.ResponseWriter, req *http.Request) {
 	for _, v := range vehicles {
 		fmt.Fprintf(w, "Vehicle: %s\t%s\t%s\t%s\n", v.Maker, v.Model, v.Year, v.Plate)
 	}
-
 	fmt.Println("Replacing on template...")
 }
 

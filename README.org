@@ -1,7 +1,5 @@
 #+title: Control de información para vehículos de CIETEL
 
-
-
 * Introducción
 Software para mantener un control (o al menos información actualizada) sobre los vehículos de CIETEL y sus respectivas reparaciones o mantenimientos.
 * Idea principal

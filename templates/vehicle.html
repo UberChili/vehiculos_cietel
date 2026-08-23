@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Maker}} {{.Model}} — Flotilla CIETEL</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        header a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.3rem;
+            opacity: 0.7;
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Vehicle summary card */
+        .vehicle-summary {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 1rem;
+        }
+
+        .vehicle-photo {
+            width: 100%;
+            height: 180px;
+            background: #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #bbb;
+        }
+
+        .vehicle-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .vehicle-details {
+            padding: 1rem;
+        }
+
+        .vehicle-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .vehicle-plate-big {
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e63946;
+            background: #fff0f0;
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .detail-item label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #999;
+            margin-bottom: 0.15rem;
+        }
+
+        .detail-item span {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        /* Maintenance section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1.25rem 0 0.75rem;
+        }
+
+        .section-header h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.4rem 0.85rem;
+            background: #e63946;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .maintenance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .maintenance-item {
+            background: white;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .maintenance-date {
+            flex-shrink: 0;
+            text-align: center;
+            background: #1a1a2e;
+            color: white;
+            border-radius: 6px;
+            padding: 0.3rem 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1.4;
+            min-width: 48px;
+        }
+
+        .maintenance-body {
+            flex: 1;
+        }
+
+        .maintenance-type {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #e63946;
+            margin-bottom: 0.2rem;
+        }
+
+        .maintenance-desc {
+            font-size: 0.88rem;
+            color: #333;
+        }
+
+        .maintenance-cost {
+            font-size: 0.78rem;
+            color: #888;
+            margin-top: 0.2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #aaa;
+            font-size: 0.9rem;
+            background: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/vehiculos">‹</a>
+    <h1>{{.Maker}} {{.Model}}</h1>
+</header>
+
+<div class="container">
+
+    <div class="vehicle-summary">
+        <div class="vehicle-photo">
+            {{if .PhotoURL}}
+                <img src="{{.PhotoURL}}" alt="Foto del vehículo">
+            {{else}}
+                🚙
+            {{end}}
+        </div>
+        <div class="vehicle-details">
+            <div class="vehicle-title">{{.Maker}} {{.Model}} {{.Year}}</div>
+            <div class="vehicle-plate-big">{{.Plate}}</div>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Asignado a</label>
+                    <span>{{.AssignedTo}}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Ubicación</label>
+                    <span>{{.Location}}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Último servicio</label>
+                    <span>{{.LastService}}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Última reparación</label>
+                    <span>{{.LastRepair}}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <h2>Reparaciones y servicios</h2>
+        <a href="/vehiculos/{{.ID}}/nuevo-registro" class="btn">+ Agregar</a>
+    </div>
+
+    <div class="maintenance-list">
+        {{if .Records}}
+            {{range .Records}}
+            <div class="maintenance-item">
+                <div class="maintenance-date">{{.DateShort}}</div>
+                <div class="maintenance-body">
+                    <div class="maintenance-type">{{.Type}}</div>
+                    <div class="maintenance-desc">{{.Description}}</div>
+                    {{if .Cost}}<div class="maintenance-cost">💰 ${{.Cost}}</div>{{end}}
+                </div>
+            </div>
+            {{end}}
+        {{else}}
+            <div class="empty-state">Sin registros aún.<br>Agrega el primer servicio.</div>
+        {{end}}
+    </div>
+
+</div>
+
+</body>
+</html>

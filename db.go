@@ -29,28 +29,19 @@ func CreateOrOpenTable() (*sql.DB, error) {
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		return nil, err
+	} else {
+		log.Println("Table 'vehicles' created successfully")
 	}
-
-	log.Println("Table 'vehicles' created successfully")
 	return db, nil
 }
 
-// func OpenTable() (*sql.DB, error) {
-// 	db, err := sql.Open("sqlite3", "./vehicles.db")
+// func AddVehicle(db *sql.DB, vehicle Vehicle) error {
+// 	_, err := db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service) VALUES(?, ?, ?, ?, ?, ?, ?)",
+// 		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.AssignedTo)
 // 	if err != nil {
-// 		return nil, err
+// 		return err
 // 	}
+// 	log.Println("New vehicle inserted successfully")
 
-// 	return db, nil
+// 	return nil
 // }
-
-func AddVehicle(db *sql.DB, vehicle Vehicle) error {
-	_, err := db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.AssignedTo)
-	if err != nil {
-		return err
-	}
-	log.Println("New vehicle inserted successfully")
-
-	return nil
-}

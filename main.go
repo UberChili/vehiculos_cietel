@@ -16,7 +16,7 @@ type App struct {
 
 func main() {
 	var err error
-	templ, err = template.ParseFiles("templates/index.html", "templates/vehicle.html")
+	templ, err := template.ParseFiles("templates/index.html", "templates/vehicle.html")
 	if err != nil {
 		log.Fatal(err)
 	}

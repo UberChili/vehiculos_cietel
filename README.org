@@ -5,14 +5,20 @@ Software para mantener un control (o al menos información actualizada) sobre lo
 * Idea principal
 Un supervisor puede consultar la información de todos los vehículos de manera sencilla.
 Al principio, al menos lo siguiente:
-- Información del vehículo (marca, modelo, placas)
-- Última fecha de servicio
-- Registro de reparaciones
-- Técnico asignado
+- [X] Información del vehículo (marca, modelo, placas)
+- [X] Técnico asignado
+- [X] Última fecha de servicio
+- [ ] Registro de reparaciones
 
-Visible en una página compuesta por HTML y CSS sencillo.
+Visible en una página compuesta por HTML y CSS sencillo. Minimalista pero bien utilizable tanto en computadora como en móvil.
 
-Esto conforma lo mínimo necesario para el funcionamiento más básico.
+* Funcionamiento básico
+- [X] Página principal (Una lista simple de todos los vehículos)
+- [X] Seleccionar un vehículo y obtener su información completa en su propia página
+- [ ] Ingresar vehículos
+- [ ] Ingresar servicios
+- [ ] Ingresar reparaciones
+- [ ] Modificar información de vehículo
+
 * Ideas a futuro
-- Utilizar una tabla para mantener el registro de cada servicio, de esta manera, el supervisor tiene un record de todos los servicios, no solamente el último.
--
+- [ ] Recordatorios de servicio

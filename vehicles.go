@@ -41,6 +41,11 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 			log.Fatal(err)
 		}
 		return
+	}
+	if id == "new" {
+		// Like this??
+		fmt.Println("User clicked on new!")
+		return
 	} else {
 		// User clicked on a car, so we need to obtain a specific car information
 		// And call the vehicle template with that specific car info

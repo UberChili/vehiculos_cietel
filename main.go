@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type App struct {
@@ -16,7 +18,7 @@ type App struct {
 
 func main() {
 	var err error
-	templ, err := template.ParseFiles("templates/index.html", "templates/vehicle.html")
+	templ, err := template.ParseFiles("templates/index.html", "templates/vehicle.html", "templates/new_vehicle.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,6 +30,13 @@ func main() {
 	app := App{db, templ}
 	defer app.db.Close()
 
+	// Using Standard Library
 	http.HandleFunc("/vehiculos/", app.HomeHandler)
+	http.ListenAndServe(":8080", nil)
+
+	// Using Chi
+	r := chi.NewRouter()
+	r.Get("/vehiculos/", app.HomeHandler)
+
 	http.ListenAndServe(":8080", nil)
 }

@@ -20,9 +20,9 @@ func CreateOrOpenTable() (*sql.DB, error) {
 			maker TEXT NOT NULL,
 			model TEXT NOT NULL,
 			year TEXT NOT NULL,
-			assigned_to TEXT,
-			location TEXT,
-			last_service TEXT
+			assigned_to TEXT DEFAULT '',
+			location TEXT DEFAULT '',
+			last_service TEXT DEFAULT ''
 			);
 		`
 

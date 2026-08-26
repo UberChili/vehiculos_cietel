@@ -23,6 +23,23 @@ type Vehicle struct {
 	PhotoURL    string
 }
 
+func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		err := a.tmpl.ExecuteTemplate(w, "new_vehicle.html", nil)
+		if err != nil {
+			return
+		}
+	}
+
+	if r.Method == "POST" {
+		// Add vehicle to db
+		// TODO
+		// Now redirect
+		http.Redirect(w, r, "/vehiculos/", http.StatusSeeOther)
+		return
+	}
+}
+
 func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 	id := strings.TrimPrefix(req.URL.Path, "/vehiculos/")
 
@@ -40,11 +57,6 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		return
-	}
-	if id == "new" {
-		// Like this??
-		fmt.Println("User clicked on new!")
 		return
 	} else {
 		// User clicked on a car, so we need to obtain a specific car information
@@ -64,12 +76,6 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 			fmt.Printf("Could not execute tempalte %s\n", err)
 			return
 		}
-		// We don't need this anymore (Iterating through a hardcoded slice of vehicles)
-		// since now I can query the database for the vehicle I need
-		// for i, vehicle := range vehicles {
-		// 	if vehicle.ID == id {
-		// 	}
-		// }
 	}
 }
 

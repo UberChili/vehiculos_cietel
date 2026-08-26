@@ -31,12 +31,16 @@ func main() {
 	defer app.db.Close()
 
 	// Using Standard Library
-	http.HandleFunc("/vehiculos/", app.HomeHandler)
-	http.ListenAndServe(":8080", nil)
+	// http.HandleFunc("/vehiculos/", app.HomeHandler)
+	// http.ListenAndServe(":8080", nil)
 
 	// Using Chi
 	r := chi.NewRouter()
 	r.Get("/vehiculos/", app.HomeHandler)
+	r.Get("/vehiculos/new/", app.NewVehicleHandler)
+	r.Get("/vehiculos/new", app.NewVehicleHandler)
+	r.Post("/vehiculos/new/", app.NewVehicleHandler)
+	r.Post("/vehiculos/new", app.NewVehicleHandler)
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", r)
 }

@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
-	"fmt"
+	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type ErrorPageData struct {
@@ -69,21 +71,22 @@ func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
-	id := strings.TrimPrefix(req.URL.Path, "/vehiculos/")
+	id := chi.URLParam(req, "id")
 
 	// If there's no prefix, only 'vehiculos' was called, so we only need the index list
 	if id == "" {
 		// Get all vehicles from database
 		vehicles, err := a.GetVehicles()
 		if err != nil {
-			// We don't have cars?
-			// Was one car malformed or incomplete?
-			log.Fatal("Error when querying for all cars: ", err)
+			log.Println("Error when querying for all cars:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar los vehículos.")
+			return
 		}
 		// Execute template with cars
-		err = a.tmpl.ExecuteTemplate(w, "index.html", vehicles)
-		if err != nil {
-			log.Fatal(err)
+		if err := a.tmpl.ExecuteTemplate(w, "index.html", vehicles); err != nil {
+			log.Println("Error rendering index.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página.")
+			return
 		}
 		return
 	} else {
@@ -91,17 +94,23 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 		// And call the vehicle template with that specific car info
 		id, err := strconv.Atoi(id)
 		if err != nil {
-			fmt.Fprintf(w, "Error when converting id to int: %s\n", err)
+			a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del vehículo no es válido.")
 			return
 		}
 
 		vehicle, err := a.GetVehicleByID(id)
-		if err != nil {
-			log.Fatal("Could not get vehicle from database: ", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			a.RenderError(w, http.StatusNotFound, "No encontrado", "No existe un vehículo con ese identificador.")
+			return
 		}
-		err = a.tmpl.ExecuteTemplate(w, "vehicle.html", vehicle)
 		if err != nil {
-			fmt.Printf("Could not execute tempalte %s\n", err)
+			log.Println("Could not get vehicle from database:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar el vehículo.")
+			return
+		}
+		if err := a.tmpl.ExecuteTemplate(w, "vehicle.html", vehicle); err != nil {
+			log.Println("Error rendering vehicle.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página.")
 			return
 		}
 	}

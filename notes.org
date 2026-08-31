@@ -5,7 +5,7 @@ Concepts to research/use, in order:
 
 1. Parsing the request — because the form is multipart (has a file), you need r.ParseMultipartForm(maxMemory) before reading values, not just r.ParseForm(). Look at the net/http docs for Request.ParseMultipartForm. maxMemory is the max bytes kept in RAM before spilling to disk — something like 10 << 20 (10MB) is typical.
 2. Reading text fields — once parsed, r.FormValue("plate") (or r.PostFormValue) gives you each named field as a string. Map those into your Vehicle struct (defined in handlers.go:11-23).
-3. Reading the file — r.FormFile("photo") returns (file, header, err). The header (*multipart.FileHeader) has the filename; the file is an io.Reader/io.Closer you'd copy somewhere (e.g. os.Create + io.Copy) if you want to actually save it. Note the field is optional in the form (no required), so handle the case where no file was submitted (err == http.ErrMissingFile).
+3. TODO handle image. Reading the file — r.FormFile("photo") returns (file, header, err). The header (*multipart.FileHeader) has the filename; the file is an io.Reader/io.Closer you'd copy somewhere (e.g. os.Create + io.Copy) if you want to actually save it. Note the field is optional in the form (no required), so handle the case where no file was submitted (err == http.ErrMissingFile).
 4. Validation — the required fields (plate, maker, model, year) have required in the HTML, but that's client-side only. Decide what you do server-side if they're empty.
 5. Wiring to the DB — there's already a commented-out AddVehicle function in db.go:38-47 that takes a *sql.DB and a Vehicle and does the INSERT. Once you build your Vehicle struct from the form, that's what you'd call (uncommenting/adapting it) before the redirect.
 

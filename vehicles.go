@@ -1,10 +1,16 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
 )
+
+type Record struct {
+	DateShort   string
+	Type        string
+	Description string
+	Cost        string
+}
 
 type Vehicle struct {
 	ID          int
@@ -16,7 +22,7 @@ type Vehicle struct {
 	LastRepair  string
 	AssignedTo  string
 	Location    string
-	Records     []string
+	Records     []Record
 	PhotoURL    string
 }
 
@@ -42,9 +48,6 @@ func NewVehicleFromForm(r *http.Request) Vehicle {
 func (a *App) GetVehicleByID(id int) (Vehicle, error) {
 	var v Vehicle
 	row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location, last_service FROM vehicles WHERE id = ?", id)
-	if row.Err() == sql.ErrNoRows {
-		return v, row.Err()
-	}
 	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
 		&v.Location, &v.LastService)
 	if err != nil {

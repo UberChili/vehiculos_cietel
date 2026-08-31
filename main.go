@@ -37,6 +37,7 @@ func main() {
 	// Using Chi
 	r := chi.NewRouter()
 	r.Get("/vehiculos/", app.HomeHandler)
+	r.Get("/vehiculos/{id}", app.HomeHandler)
 	r.Get("/vehiculos/new/", app.NewVehicleHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new/", app.NewVehicleHandler)

@@ -2,10 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -23,64 +20,23 @@ type Vehicle struct {
 	PhotoURL    string
 }
 
-func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		err := a.tmpl.ExecuteTemplate(w, "new_vehicle.html", nil)
-		if err != nil {
-			return
-		}
+func NewVehicleFromForm(r *http.Request) Vehicle {
+	// process and sanitize strings
+	plate := strings.ToUpper(r.PostFormValue("plate"))
+	maker := CapitalizeFirst(strings.ToLower(r.PostFormValue("maker")))
+	model := CapitalizeFirst(strings.ToLower(r.PostFormValue("model")))
+	year := r.PostFormValue("year")
+	assigned_to := r.PostFormValue("assigned_to")
+	if assigned_to != "" {
+		assigned_to = CapitalizeFirst(strings.ToLower(assigned_to))
 	}
-
-	if r.Method == "POST" {
-		// Add vehicle to db
-		// TODO
-		// Now redirect
-		http.Redirect(w, r, "/vehiculos/", http.StatusSeeOther)
-		return
+	location := r.PostFormValue("location")
+	if location != "" {
+		location = CapitalizeFirst(strings.ToLower(location))
 	}
-}
+	new_vehicle := Vehicle{Maker: maker, Model: model, Year: year, Plate: plate, AssignedTo: assigned_to, Location: location}
 
-func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
-	id := strings.TrimPrefix(req.URL.Path, "/vehiculos/")
-
-	// If there's no prefix, only 'vehiculos' was called, so we only need the index list
-	if id == "" {
-		// Get all vehicles from database
-		vehicles, err := a.GetVehicles()
-		if err != nil {
-			// We don't have cars?
-			// Was one car malformed or incomplete?
-			log.Fatal("Error when querying for all cars: ", err)
-		}
-		// Execute template with cars
-		err = a.tmpl.ExecuteTemplate(w, "index.html", vehicles)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	} else {
-		// User clicked on a car, so we need to obtain a specific car information
-		// And call the vehicle template with that specific car info
-		id, err := strconv.Atoi(id)
-		if err != nil {
-			fmt.Fprintf(w, "Error when converting id to int: %s\n", err)
-			return
-		}
-
-		vehicle, err := a.GetVehicleByID(id)
-		if err != nil {
-			log.Fatal("Could not get vehicle from database: ", err)
-		}
-		err = a.tmpl.ExecuteTemplate(w, "vehicle.html", vehicle)
-		if err != nil {
-			fmt.Printf("Could not execute tempalte %s\n", err)
-			return
-		}
-	}
-}
-
-func NewVehicleHandler(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("Hello there. This is the handler that would add a new vehicle!")
+	return new_vehicle
 }
 
 func (a *App) GetVehicleByID(id int) (Vehicle, error) {

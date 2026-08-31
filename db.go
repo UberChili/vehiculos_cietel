@@ -35,13 +35,13 @@ func CreateOrOpenTable() (*sql.DB, error) {
 	return db, nil
 }
 
-// func AddVehicle(db *sql.DB, vehicle Vehicle) error {
-// 	_, err := db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service) VALUES(?, ?, ?, ?, ?, ?, ?)",
-// 		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.AssignedTo)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	log.Println("New vehicle inserted successfully")
+func (a *App) InsertVehicle(vehicle Vehicle) error {
+	_, err := a.db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.LastService)
+	if err != nil {
+		return err
+	}
+	log.Println("New vehicle inserted successfully")
 
-// 	return nil
-// }
+	return nil
+}

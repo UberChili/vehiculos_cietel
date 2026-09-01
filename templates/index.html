@@ -230,6 +230,7 @@
         }
 
         tbody tr {
+            position: relative;
             cursor: pointer;
             transition: background 0.1s;
         }
@@ -243,6 +244,14 @@
             font-weight: 700;
             font-size: 0.85rem;
             color: #e63946;
+        }
+
+        /* Makes the whole row a real link, not an inline onclick handler:
+           absolutely positioned relative to tr (position:relative above),
+           so it covers the full row regardless of which cell it sits in. */
+        .row-link {
+            position: absolute;
+            inset: 0;
         }
     </style>
 </head>
@@ -293,8 +302,11 @@
             </thead>
             <tbody>
                 {{range .}}
-                <tr onclick="window.location='/vehiculos/{{.ID}}'">
-                    <td class="plate-cell">{{.Plate}}</td>
+                <tr>
+                    <td class="plate-cell">
+                        <a class="row-link" href="/vehiculos/{{.ID}}"></a>
+                        {{.Plate}}
+                    </td>
                     <td>{{.Maker}} {{.Model}}</td>
                     <td>{{.Year}}</td>
                     <td>{{.LastService}}</td>

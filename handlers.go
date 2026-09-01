@@ -57,8 +57,26 @@ func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "No se pudo procesar el formulario enviado. Intenta de nuevo.")
 			return
 		}
+		photo_url, photo_err := SavePhoto(r)
+		if photo_err != nil {
+			var verr *ValidationError
+			if errors.As(photo_err, &verr) {
+				a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", verr.Message)
+				return
+			}
+			log.Println("Error saving vehicle photo:", photo_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al guardar la foto.")
+			return
+		}
+
 		new_vehicle := NewVehicleFromForm(r)
+		new_vehicle.PhotoURL = photo_url
 		if insert_err := a.InsertVehicle(new_vehicle); insert_err != nil {
+			var verr *ValidationError
+			if errors.As(insert_err, &verr) {
+				a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", verr.Message)
+				return
+			}
 			log.Println("Error inserting new vehicle to database:", insert_err)
 			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al insertar vehículo nuevo en base de datos.")
 			return

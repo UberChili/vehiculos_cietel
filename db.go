@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -22,7 +23,8 @@ func CreateOrOpenTable() (*sql.DB, error) {
 			year TEXT NOT NULL,
 			assigned_to TEXT DEFAULT '',
 			location TEXT DEFAULT '',
-			last_service TEXT DEFAULT ''
+			last_service TEXT DEFAULT '',
+			photo_url TEXT DEFAULT ''
 			);
 		`
 
@@ -32,12 +34,26 @@ func CreateOrOpenTable() (*sql.DB, error) {
 	} else {
 		log.Println("Table 'vehicles' created successfully")
 	}
+
+	// Migration for dbs created before photo_url existed.
+	if _, err := db.Exec("ALTER TABLE vehicles ADD COLUMN photo_url TEXT DEFAULT ''"); err != nil &&
+		!strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
+
 	return db, nil
 }
 
 func (a *App) InsertVehicle(vehicle Vehicle) error {
-	_, err := a.db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.LastService)
+	if err := vehicle.Validate(); err != nil {
+		return err
+	}
+	// Check for valid plate (at least length of chars)
+	if len(vehicle.Plate) > 10 {
+		return &ValidationError{"La placa es demasiado larga (máximo 10 caracteres)"}
+	}
+	_, err := a.db.Exec("INSERT INTO vehicles(plate, maker, model, year, assigned_to, location, last_service, photo_url) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+		vehicle.Plate, vehicle.Maker, vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.LastService, vehicle.PhotoURL)
 	if err != nil {
 		return err
 	}

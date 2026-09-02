@@ -145,6 +145,7 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar los vehículos.")
 			return
 		}
+
 		// Execute template with cars
 		if err := a.tmpl.ExecuteTemplate(w, "index.html", vehicles); err != nil {
 			log.Println("Error rendering index.html:", err)
@@ -171,6 +172,17 @@ func (a *App) HomeHandler(w http.ResponseWriter, req *http.Request) {
 			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar el vehículo.")
 			return
 		}
+
+		// Get all records from a vehicle
+		records, err := a.GetVehicleRecordsByID(id)
+		if err != nil {
+			log.Println("Error when querying for records:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar los registros de vehículo.")
+			return
+		}
+
+		vehicle.Records = records
+
 		if err := a.tmpl.ExecuteTemplate(w, "vehicle.html", vehicle); err != nil {
 			log.Println("Error rendering vehicle.html:", err)
 			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página.")

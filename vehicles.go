@@ -161,6 +161,27 @@ func (a *App) GetVehicleByID(id int) (Vehicle, error) {
 	return v, nil
 }
 
+func (a *App) GetVehicleRecordsByID(id int) ([]Record, error) {
+	rows, err := a.db.Query("SELECT date, type, description, cost FROM records WHERE vehicle_id = ?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []Record
+	for rows.Next() {
+		var r Record
+		if err := rows.Scan(&r.DateShort, &r.Type, &r.Description, &r.Cost); err != nil {
+			return records, err
+		}
+		records = append(records, r)
+	}
+	if err = rows.Err(); err != nil {
+		return records, err
+	}
+
+	return records, nil
+}
+
 func (a *App) GetVehicles() ([]Vehicle, error) {
 	rows, err := a.db.Query("SELECT id, plate, maker, model, year, assigned_to, location, last_service, photo_url FROM vehicles")
 	if err != nil {

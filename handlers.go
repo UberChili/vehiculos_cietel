@@ -48,8 +48,6 @@ func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" {
 		// Add vehicle to db
-		// TODO
-		// Maybe parse returns a sequence of bytes?
 		r.Body = http.MaxBytesReader(w, r.Body, 20<<20)
 		maxMemory := int64(10 << 20)
 		if parse_err := r.ParseMultipartForm(maxMemory); parse_err != nil {
@@ -84,6 +82,53 @@ func (a *App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Vehicle added with no errors. Now redirect
 		http.Redirect(w, r, "/vehiculos/", http.StatusSeeOther)
+		return
+	}
+}
+
+func (a *App) NewRecordHandler(w http.ResponseWriter, req *http.Request) {
+	id := chi.URLParam(req, "id")
+	if id == "" {
+		log.Println("No id in URL?")
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "No se especificó un vehículo.")
+		return
+	}
+
+	if req.Method == "GET" {
+		// Render to a buffer first: if ExecuteTemplate fails partway through,
+		// nothing has been written to w yet, so RenderError can still set the
+		// status code correctly instead of appending onto a half-sent 200 response.
+		var buf bytes.Buffer
+		data := struct{ VehicleID string }{VehicleID: id}
+		if err := a.tmpl.ExecuteTemplate(&buf, "new_record.html", data); err != nil {
+			log.Println("Error rendering new_record.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página. Intenta de nuevo.")
+			return
+		}
+		buf.WriteTo(w)
+	}
+
+	if req.Method == "POST" {
+		// TODO
+		if parse_err := req.ParseForm(); parse_err != nil {
+			log.Println("Could not parse form values:", parse_err)
+			a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "No se pudo procesar el formulario enviado. Intenta de nuevo.")
+			return
+		}
+		new_record := NewRecordFromForm(req)
+		if insert_err := a.InsertRecord(id, new_record); insert_err != nil {
+			var verr *ValidationError
+			if errors.As(insert_err, &verr) {
+				a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", verr.Message)
+				return
+			}
+			log.Println("Error inserting new register to database:", insert_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al insertar registro de reparación nuevo en base de datos para vehículo.")
+			return
+		}
+
+		// Register added with no errors. Now redirect
+		http.Redirect(w, req, "/vehiculos/", http.StatusSeeOther)
 		return
 	}
 }

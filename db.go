@@ -9,7 +9,7 @@ import (
 )
 
 func CreateOrOpenTable() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./vehicles.db")
+	db, err := sql.Open("sqlite3", "./vehicles.db?_foreign_keys=on")
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +41,23 @@ func CreateOrOpenTable() (*sql.DB, error) {
 		return nil, err
 	}
 
+	recordsStmt := `
+				CREATE TABLE IF NOT EXISTS records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+				date TEXT NOT NULL,
+				type TEXT NOT NULL,
+				description TEXT NOT NULL,
+				cost TEXT DEFAULT ''
+				);
+			`
+
+	if _, err = db.Exec(recordsStmt); err != nil {
+		return nil, err
+	} else {
+		log.Println("Table 'records' created successfully")
+	}
+
 	return db, nil
 }
 
@@ -59,5 +76,19 @@ func (a *App) InsertVehicle(vehicle Vehicle) error {
 	}
 	log.Println("New vehicle inserted successfully")
 
+	return nil
+}
+
+func (a *App) InsertRecord(vehicle_id string, record Record) error {
+	if err := record.Validate(); err != nil {
+		return err
+	}
+
+	_, err := a.db.Exec("INSERT INTO records(vehicle_id, date, type, description, cost) VALUES(?, ?, ?, ?, ?)",
+		vehicle_id, record.DateShort, record.Type, record.Description, record.Cost)
+	if err != nil {
+		return err
+	}
+	log.Printf("New record for vehicle %s inserted succesfully\n", vehicle_id)
 	return nil
 }

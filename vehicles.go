@@ -70,6 +70,31 @@ func NewVehicleFromForm(r *http.Request) Vehicle {
 	return new_vehicle
 }
 
+func NewRecordFromForm(r *http.Request) Record {
+	// process and sanitize strings
+	// TODO ?
+	date_short := r.FormValue("date")
+	record_type := r.FormValue("type")
+	description := r.FormValue("description")
+	cost := r.FormValue("cost")
+
+	return Record{DateShort: date_short, Type: record_type, Description: description, Cost: cost}
+}
+
+// Same idea as Validate for the Vehicle type
+func (r Record) Validate() error {
+	if strings.TrimSpace(r.DateShort) == "" {
+		return &ValidationError{"La fecha es obligatoria"}
+	}
+	if strings.TrimSpace(r.Type) == "" {
+		return &ValidationError{"Seleccionar un tipo de reparación es obligatorio"}
+	}
+	if strings.TrimSpace(r.Description) == "" {
+		return &ValidationError{"Ingresar una descripción de la reparación o mantenimiento es obligatorio"}
+	}
+	return nil
+}
+
 // Validate checks the fields required to save a vehicle. Client-side
 // "required" on the form is not enough, since requests don't have to go
 // through the browser.
@@ -107,7 +132,7 @@ func SavePhoto(r *http.Request) (string, error) {
 		return "", &ValidationError{"Formato de imagen no soportado (usa jpg, png, gif o webp)"}
 	}
 
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		return "", err
 	}
 

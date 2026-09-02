@@ -18,7 +18,7 @@ type App struct {
 
 func main() {
 	var err error
-	templ, err := template.ParseFiles("templates/index.html", "templates/vehicle.html", "templates/new_vehicle.html", "templates/error.html")
+	templ, err := template.ParseFiles("templates/index.html", "templates/vehicle.html", "templates/new_vehicle.html", "templates/new_record.html", "templates/error.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,6 +40,10 @@ func main() {
 	r.Get("/vehiculos/", app.HomeHandler)
 	r.Get("/vehiculos/{id}", app.HomeHandler)
 	r.Get("/vehiculos/{id}/", app.HomeHandler)
+	r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
+	r.Get("/vehiculos/{id}/nuevo-registro/", app.NewRecordHandler)
+	r.Post("/vehiculos/{id}/nuevo-registro/", app.NewRecordHandler)
+	r.Post("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 	r.Get("/vehiculos/new/", app.NewVehicleHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new/", app.NewVehicleHandler)

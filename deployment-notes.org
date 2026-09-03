@@ -41,22 +41,22 @@ you're actually touching, and always run =nginx -t= before
 
 * Security — check these, roughly in priority order
 
-** 1. Verify HTTP Basic Auth is actually on — check this first
+** 1. HTTP Basic Auth — DONE (2026-09-03)
 
-The original plan (step 9) was to gate the site with nginx HTTP Basic Auth,
-since the app itself has no login. We got pulled into chasing the
-DNS → nginx-conflict → port-collision chain of bugs and I never got
-confirmation this step actually happened. As of tonight, the app may be
-sitting on the public internet with *zero* password protection.
+Checked the night this file was written and confirmed the app was in fact
+sitting fully open on the public internet (plain =curl=, no credentials,
+returned =200= and served the real vehicle list). Fixed same night:
+htpasswd + =auth_basic= added to the =location /= block of the 443 server
+block in =/etc/nginx/sites-available/vehiculoscietel.androsforge.com=.
+Verified from both the server and externally — =curl -I= now returns
+=401= with =WWW-Authenticate: Basic realm="Flotilla CIETEL"= as expected.
 
-Check first:
+Password file: =/etc/nginx/.htpasswd_vehiculos=. To add/rotate a user:
 #+begin_src sh
-curl -I https://vehiculoscietel.androsforge.com/vehiculos
+htpasswd /etc/nginx/.htpasswd_vehiculos someusername
 #+end_src
-If that comes back =200=, not =401=, there is no auth gate — anyone who
-finds or guesses the URL can add, edit, and delete real vehicles/records.
-If it's missing, add it (htpasswd + auth_basic in the nginx site block —
-same steps as originally planned).
+(drop the =-c= used the first time — that flag *creates* the file, and
+would wipe out any existing users in it.)
 
 ** 2. Real in-app authentication (medium-term, tracked in README)
 

@@ -31,3 +31,35 @@ func TestFormatDateDisplay(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDisplayDate(t *testing.T) {
+	t.Run("valid dd-mm-yyyy converts to ISO", func(t *testing.T) {
+		got, err := ParseDisplayDate("02-09-2026")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "2026-09-02" {
+			t.Errorf("got %q, want %q", got, "2026-09-02")
+		}
+	})
+
+	t.Run("round-trips with FormatDateDisplay", func(t *testing.T) {
+		iso := "2026-12-31"
+		display := FormatDateDisplay(iso)
+		back, err := ParseDisplayDate(display)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if back != iso {
+			t.Errorf("round trip: got %q, want %q", back, iso)
+		}
+	})
+
+	for _, bad := range []string{"2026-09-02", "31/02/2026", "not-a-date", ""} {
+		t.Run("rejects "+bad, func(t *testing.T) {
+			if _, err := ParseDisplayDate(bad); err == nil {
+				t.Errorf("expected an error for %q", bad)
+			}
+		})
+	}
+}

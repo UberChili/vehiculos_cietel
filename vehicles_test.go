@@ -166,8 +166,11 @@ func TestNewVehicleFromFormLeavesOptionalFieldsEmpty(t *testing.T) {
 }
 
 func TestNewRecordFromForm(t *testing.T) {
+	// The date field (new_record.html) submits dd-mm-yyyy, matching how
+	// dates are displayed everywhere else in the app; NewRecordFromForm
+	// must convert it to ISO before it reaches storage/validation.
 	req := formRequest(map[string]string{
-		"date":        "2026-09-02",
+		"date":        "02-09-2026",
 		"type":        "Reparación",
 		"description": "Cambio de balatas",
 		"cost":        "1500.00",
@@ -178,6 +181,23 @@ func TestNewRecordFromForm(t *testing.T) {
 	if r.DateShort != "2026-09-02" || r.Type != "Reparación" ||
 		r.Description != "Cambio de balatas" || r.Cost != "1500.00" {
 		t.Errorf("unexpected record from form: %+v", r)
+	}
+}
+
+func TestNewRecordFromFormLeavesUnparseableDateForValidateToReject(t *testing.T) {
+	req := formRequest(map[string]string{
+		"date":        "not-a-date",
+		"type":        "Servicio",
+		"description": "x",
+	})
+
+	r := NewRecordFromForm(req)
+
+	if r.DateShort != "not-a-date" {
+		t.Errorf("DateShort = %q, want unchanged %q", r.DateShort, "not-a-date")
+	}
+	if err := r.Validate(); err == nil {
+		t.Error("expected Validate to reject the unparseable date")
 	}
 }
 

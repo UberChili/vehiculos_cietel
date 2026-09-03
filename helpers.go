@@ -28,3 +28,14 @@ func FormatDateDisplay(iso string) string {
 	}
 	return t.Format("02-01-2006")
 }
+
+// ParseDisplayDate is FormatDateDisplay's inverse: it converts a date
+// entered by the user as dd-mm-yyyy (the format the record form uses,
+// matching what's shown everywhere else) into ISO 8601 for storage.
+func ParseDisplayDate(display string) (string, error) {
+	t, err := time.Parse("02-01-2006", display)
+	if err != nil {
+		return "", err
+	}
+	return t.Format("2006-01-02"), nil
+}

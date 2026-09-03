@@ -191,8 +191,10 @@
                 </div>
                 <div class="field">
                     <label>Fecha <span class="required-star">*</span></label>
-                    <input type="date" name="date" required>
-                    <p class="field-hint">Formato: día-mes-año</p>
+                    <input type="text" name="date" id="dateInput" placeholder="dd-mm-aaaa"
+                           pattern="\d{2}-\d{2}-\d{4}" title="Formato: dd-mm-aaaa" inputmode="numeric"
+                           maxlength="10" autocomplete="off" required>
+                    <p class="field-hint">Formato: dd-mm-aaaa (ejemplo: 02-09-2026)</p>
                 </div>
             </div>
 
@@ -217,6 +219,17 @@
 <script>
     document.getElementById('typeSelect').addEventListener('change', function(e) {
         document.getElementById('repairTip').classList.toggle('visible', e.target.value === 'Reparación');
+    });
+
+    // Auto-inserts the dashes as digits are typed (02092026 -> 02-09-2026),
+    // since this is a plain text field rather than a native date picker.
+    document.getElementById('dateInput').addEventListener('input', function(e) {
+        var digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+        var parts = [];
+        if (digits.length > 0) parts.push(digits.slice(0, 2));
+        if (digits.length > 2) parts.push(digits.slice(2, 4));
+        if (digits.length > 4) parts.push(digits.slice(4, 8));
+        e.target.value = parts.join('-');
     });
 </script>
 

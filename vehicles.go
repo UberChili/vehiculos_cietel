@@ -73,7 +73,15 @@ func NewVehicleFromForm(r *http.Request) Vehicle {
 }
 
 func NewRecordFromForm(r *http.Request) Record {
+	// The form's date field is typed by the user as dd-mm-yyyy (see
+	// new_record.html); convert to the ISO form used internally for
+	// storage/sorting. On a malformed value, leave it as submitted —
+	// Record.Validate rejects it with the same "La fecha no es válida"
+	// error either way, so there's no need to duplicate that check here.
 	date_short := r.FormValue("date")
+	if iso, err := ParseDisplayDate(date_short); err == nil {
+		date_short = iso
+	}
 	record_type := r.FormValue("type")
 	description := r.FormValue("description")
 	cost := r.FormValue("cost")

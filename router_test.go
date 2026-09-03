@@ -204,6 +204,47 @@ func TestNewRecordHandlerRejectsInvalidDate(t *testing.T) {
 	}
 }
 
+// TestNewRecordHandlerAcceptsDisplayFormatDate is a regression test: the
+// date field is a plain text input the user fills in as dd-mm-yyyy (see
+// new_record.html), and that must end up stored/displayed as the correct
+// calendar date, not silently misinterpreted or rejected.
+func TestNewRecordHandlerAcceptsDisplayFormatDate(t *testing.T) {
+	ts := newTestServer(t)
+
+	body, ct := buildMultipart(t, map[string]string{
+		"plate": "AAA-111", "maker": "Chevrolet", "model": "Spark", "year": "2018",
+	}, "", "", nil)
+	resp, _ := http.Post(ts.URL+"/vehiculos/new", ct, body)
+	resp.Body.Close()
+
+	// 02-09-2026 (dd-mm-yyyy) is September 2nd. If the form/handler ever
+	// misread this as month-day, it would land on the 9th of February.
+	form := url.Values{"type": {"Servicio"}, "date": {"02-09-2026"}, "description": {"Cambio de aceite"}}
+	resp, err := http.PostForm(ts.URL+"/vehiculos/1/nuevo-registro", form)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	getResp, err := http.Get(ts.URL + "/vehiculos/1/registro/1")
+	if err != nil {
+		t.Fatalf("GET record: %v", err)
+	}
+	defer getResp.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(getResp.Body)
+	page := buf.String()
+	if !strings.Contains(page, "02-09-2026") {
+		t.Errorf("record page should display 02-09-2026, got:\n%s", page)
+	}
+	if strings.Contains(page, "09-02-2026") {
+		t.Errorf("record page shows the month/day swapped (09-02-2026), got:\n%s", page)
+	}
+}
+
 func TestEditVehicleHandlerPrefillsAndUpdates(t *testing.T) {
 	ts := newTestServer(t) // parses templates via a relative path, so set up before chdir
 	t.Chdir(t.TempDir())   // EditVehicleHandler may write photos under "uploads/"

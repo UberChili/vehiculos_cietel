@@ -74,5 +74,5 @@ func main() {
 	defer app.db.Close()
 
 	r := NewRouter(&app)
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8081", r))
 }

@@ -46,8 +46,15 @@ mantener.
 - [ ] Editar o corregir un registro ya creado (por ahora solo se puede
   eliminar y volver a capturar)
 - [ ] Recordatorios de servicio próximo a vencer
-- [ ] Autenticación / control de acceso (hoy cualquiera con la URL puede
-  usar la aplicación)
+- [ ] Autenticación real dentro de la aplicación (login con usuario y
+  contraseña, contra una tabla de usuarios). Hoy en producción el único
+  candado es HTTP Basic Auth a nivel de nginx (una sola contraseña
+  compartida, sin identificar quién hizo qué) — suficiente para un único
+  usuario de confianza, pero no algo que escale. Ver =deployment-notes.org=
+  para más detalle
+- [ ] Simplificar la ruta pública: hoy la app vive bajo =/vehiculos=
+  (=vehiculoscietel.androsforge.com/vehiculos=), redundante ahora que el
+  subdominio ya dice "vehiculos". Ver =deployment-notes.org=
 
 * Uso
 
@@ -68,10 +75,12 @@ Desde la raíz del repositorio:
 go run .
 #+end_src
 
-El servidor queda escuchando en el puerto ~8080~. La aplicación vive bajo el
-prefijo =/vehiculos=, por ejemplo:
+El servidor queda escuchando en =127.0.0.1:8081= (puerto fijo en el código,
+=main.go=; en un despliegue real normalmente hay un reverse proxy —nginx,
+por ejemplo— por delante, ver =deployment-notes.org=). La aplicación vive
+bajo el prefijo =/vehiculos=, por ejemplo:
 
-http://localhost:8080/vehiculos
+http://localhost:8081/vehiculos
 
 Al iniciar por primera vez se crean automáticamente:
 - El archivo =vehicles.db= con las tablas =vehicles= y =records=.
@@ -215,5 +224,4 @@ registros de ese vehículo de cada tipo.
 
 - [ ] Eliminar vehículos
 - [ ] Recordatorios de servicio próximo a vencer
-- [ ] Autenticación / control de acceso por usuario
 - [ ] Búsqueda o filtros en la lista de vehículos

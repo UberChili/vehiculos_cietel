@@ -1,0 +1,136 @@
+#+title: Deployment notes — androsforge.com / Vultr server
+
+Notes from getting this app live on the Vultr box behind androsforge.com,
+written the night it first went live. Read this before touching the server
+again — several things below are worth checking first thing, not "eventually."
+
+* Current live setup
+
+- URL: https://vehiculoscietel.androsforge.com/vehiculos
+  (yes, "/vehiculos" on top of a subdomain that already says "vehiculos" —
+  redundant, see the TODO at the bottom. Left alone tonight on purpose.)
+- Server: root@216.238.76.237, logged into directly as root (no separate
+  sudo user — see security notes below).
+- App: binary at /opt/vehiculos-cietel/vehiculos_cietel, run via systemd
+  (vehiculos.service) as a dedicated unprivileged user, =vehiculos=.
+- Listens on 127.0.0.1:8081 (localhost only, not 8080 — see below).
+- Reverse proxy: nginx, config at
+  /etc/nginx/sites-available/vehiculoscietel.androsforge.com, symlinked into
+  sites-enabled.
+- HTTPS: Let's Encrypt via certbot,
+  /etc/letsencrypt/live/vehiculoscietel.androsforge.com/.
+
+* Important: this server is not dedicated to this app
+
+Discovered mid-deployment (the hard way) that this box also hosts:
+- Your personal site, androsforge.com itself (its own nginx vhost,
+  sites-available/androsforge).
+- A Nextcloud instance at cloud.androsforge.com, running in Docker.
+  =docker-proxy= owns port 8080 on *all* interfaces (0.0.0.0 and ::) — this
+  is exactly what caused vehiculos.service to crash-loop for a while
+  tonight, until it got moved to 8081.
+- Another project/domain, andresz.xyz (sites-available/andresz). Its TLS
+  cert looked expired (Nov 2025) when checked — possibly abandoned, but
+  don't touch it without checking with yourself first.
+
+Practical consequence: a mistake in a *shared* nginx file, or in
+nginx.conf itself, can take down all of the above at once — not just this
+app. When editing nginx config going forward, double-check which file
+you're actually touching, and always run =nginx -t= before
+=systemctl reload nginx=, every time, no exceptions.
+
+* Security — check these, roughly in priority order
+
+** 1. Verify HTTP Basic Auth is actually on — check this first
+
+The original plan (step 9) was to gate the site with nginx HTTP Basic Auth,
+since the app itself has no login. We got pulled into chasing the
+DNS → nginx-conflict → port-collision chain of bugs and I never got
+confirmation this step actually happened. As of tonight, the app may be
+sitting on the public internet with *zero* password protection.
+
+Check first:
+#+begin_src sh
+curl -I https://vehiculoscietel.androsforge.com/vehiculos
+#+end_src
+If that comes back =200=, not =401=, there is no auth gate — anyone who
+finds or guesses the URL can add, edit, and delete real vehicles/records.
+If it's missing, add it (htpasswd + auth_basic in the nginx site block —
+same steps as originally planned).
+
+** 2. Real in-app authentication (medium-term, tracked in README)
+
+Nginx Basic Auth is a reasonable stopgap for "one trusted relative," but:
+- it's a single shared password, not per-user;
+- no session/logout, no "who is logged in";
+- no audit trail of who added/edited/deleted a given record;
+- the password only lives in a server-side htpasswd file you manage by hand.
+
+If more than one person ever uses this, or you care about knowing who
+touched what, this needs real login: a users table, hashed passwords
+(bcrypt — =golang.org/x/crypto/bcrypt= is the standard low-effort choice
+for a Go app this size), and session cookies. Not urgent tonight, but
+worth planning for before this grows past "one cousin."
+
+** 3. You SSH in as root directly
+
+Works, but every command — including a future copy-paste mistake — runs
+with full system privileges, no friction in between. Worth doing at some
+point, not tonight:
+- Create a dedicated non-root user with sudo access for day-to-day work.
+- Once that's confirmed working, disable direct root SSH login
+  (=PermitRootLogin no= in =/etc/ssh/sshd_config=).
+- Confirm SSH key auth is in use, not passwords
+  (=PasswordAuthentication no=).
+
+** 4. Port bookkeeping
+
+- 8080 → Nextcloud (docker-proxy), all interfaces.
+- 8081 → vehiculos_cietel, localhost only.
+Keep a mental note of this before spinning up anything else on this box —
+tonight's crash-loop was exactly this kind of collision.
+
+** 5. Confirm certificate auto-renewal isn't confused
+
+The vehiculoscietel.androsforge.com cert went through several certbot runs
+tonight, some of them against conflicting/wrong nginx server blocks before
+it landed correctly. Worth a sanity check once things are calm:
+#+begin_src sh
+certbot renew --dry-run
+#+end_src
+to make sure the renewal path isn't tripped up by the earlier mess.
+
+** 6. Backups — still nothing in place
+
+=vehicles.db= and =uploads/= are the only copy of real data once your
+cousin starts using this for real. A daily cron doing:
+#+begin_src sh
+sqlite3 /opt/vehiculos-cietel/vehicles.db ".backup /somewhere/backup-$(date +%F).db"
+#+end_src
+plus a copy of =uploads/=, ideally landing somewhere other than this same
+disk — protects against more than just your own mistakes.
+
+* Known cleanup leftover (harmless clutter, not urgent)
+
+=/etc/nginx/sites-available/vehiculos.androsforge.com= — the old,
+pre-rename site file from before we sorted out the symlink pointing to the
+wrong target — should already be deleted as part of that fix. Worth a
+quick =ls /etc/nginx/sites-available/= sometime to confirm it's actually
+gone, so it doesn't cause déjà vu (or another "conflicting server name")
+later.
+
+* For tomorrow: the redundant URL
+
+Right now: https://vehiculoscietel.androsforge.com/vehiculos
+
+The =/vehiculos= prefix made sense back when this only existed as
+=localhost:8080/vehiculos= on a dev machine that might run other things.
+Now that it has its own subdomain, it's just a mouthful. Options, to
+figure out together:
+- *Simplest*: adjust nginx so the site answers at the bare domain (map
+  =/= to the app's =/vehiculos=, or strip the prefix on the way in).
+- *Cleaner long-term*: change the Go app's own routes to serve everything
+  at =/= instead of under =/vehiculos= (=main.go='s =NewRouter=) — the
+  subdomain already provides that namespacing, so the prefix is pure
+  redundancy. More invasive (touches every route and every =href= in the
+  templates), so it deserves a focused session rather than a quick patch.

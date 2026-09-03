@@ -115,6 +115,30 @@
             color: #e63946;
         }
 
+        .field-hint {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 0.35rem;
+        }
+
+        .tip-box {
+            display: none;
+            align-items: flex-start;
+            gap: 0.5rem;
+            background: #fff8e1;
+            border-left: 3px solid #f0ad4e;
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            margin-bottom: 0.6rem;
+            font-size: 0.8rem;
+            color: #8a6d3b;
+            line-height: 1.4;
+        }
+
+        .tip-box.visible {
+            display: flex;
+        }
+
         .btn-submit {
             width: 100%;
             padding: 0.85rem;
@@ -159,7 +183,7 @@
             <div class="field-row">
                 <div class="field">
                     <label>Tipo <span class="required-star">*</span></label>
-                    <select name="type" required>
+                    <select name="type" id="typeSelect" required>
                         <option value="" disabled selected>Selecciona...</option>
                         <option value="Servicio">Servicio</option>
                         <option value="Reparación">Reparación</option>
@@ -168,11 +192,13 @@
                 <div class="field">
                     <label>Fecha <span class="required-star">*</span></label>
                     <input type="date" name="date" required>
+                    <p class="field-hint">Formato: día-mes-año</p>
                 </div>
             </div>
 
             <div class="field">
                 <label>Descripción <span class="required-star">*</span></label>
+                <p id="repairTip" class="tip-box">💡 Recuerda agregar notas que consideres importantes. ¿Fue con otro mecánico? ¿Algo fuera de lo común?</p>
                 <textarea name="description" placeholder="Cambio de aceite y filtros" required></textarea>
             </div>
 
@@ -187,6 +213,12 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.getElementById('typeSelect').addEventListener('change', function(e) {
+        document.getElementById('repairTip').classList.toggle('visible', e.target.value === 'Reparación');
+    });
+</script>
 
 </body>
 </html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar {{.Maker}} {{.Model}} — Flotilla CIETEL</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        header a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.3rem;
+            opacity: 0.7;
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .field {
+            margin-bottom: 1.1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            margin-bottom: 0.35rem;
+        }
+
+        .required-star {
+            color: #e63946;
+            margin-left: 2px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 7px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: #1a1a1a;
+            background: #fafafa;
+            transition: border-color 0.15s;
+            -webkit-appearance: none;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #e63946;
+            background: white;
+        }
+
+        input::placeholder {
+            color: #bbb;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        /* Current photo + delete checkbox */
+        .current-photo img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+            margin-bottom: 0.6rem;
+        }
+
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: normal;
+            color: #555;
+        }
+
+        .checkbox-field input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            padding: 0;
+            border: none;
+            background: none;
+            accent-color: #e63946;
+        }
+
+        /* Photo upload */
+        .photo-upload {
+            border: 2px dashed #e0e0e0;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s;
+            position: relative;
+        }
+
+        .photo-upload:hover {
+            border-color: #e63946;
+        }
+
+        .photo-upload input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            border: none;
+            background: none;
+        }
+
+        .photo-upload-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .photo-upload-text {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .photo-upload-text strong {
+            color: #e63946;
+        }
+
+        .photo-preview {
+            display: none;
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 0.75rem;
+        }
+
+        .required-note {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 1.25rem;
+        }
+
+        .required-note span {
+            color: #e63946;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.85rem;
+            background: #e63946;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-submit:active {
+            opacity: 0.85;
+        }
+
+        .btn-cancel {
+            display: block;
+            text-align: center;
+            margin-top: 0.85rem;
+            color: #999;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/vehiculos/{{.ID}}/">‹</a>
+    <h1>Editar vehículo</h1>
+</header>
+
+<div class="container">
+    <div class="card">
+        <form action="/vehiculos/{{.ID}}/editar" method="POST" enctype="multipart/form-data">
+
+            <p class="required-note"><span>*</span> Campo obligatorio</p>
+
+            <div class="field">
+                <label>Placas <span class="required-star">*</span></label>
+                <input type="text" name="plate" value="{{.Plate}}" placeholder="ABC-123" required autocomplete="off">
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label>Marca <span class="required-star">*</span></label>
+                    <input type="text" name="maker" value="{{.Maker}}" placeholder="Chevrolet" required>
+                </div>
+                <div class="field">
+                    <label>Modelo <span class="required-star">*</span></label>
+                    <input type="text" name="model" value="{{.Model}}" placeholder="Spark" required>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Año <span class="required-star">*</span></label>
+                <input type="text" name="year" value="{{.Year}}" placeholder="2018" required>
+            </div>
+
+            <div class="field">
+                <label>Asignado a</label>
+                <input type="text" name="assigned_to" value="{{.AssignedTo}}" placeholder="Nombre del técnico">
+            </div>
+
+            <div class="field">
+                <label>Ubicación actual</label>
+                <input type="text" name="location" value="{{.Location}}" placeholder="Morelia, Michoacán">
+            </div>
+
+            <div class="field">
+                <label>Foto del vehículo</label>
+
+                {{if .PhotoURL}}
+                <div class="current-photo">
+                    <img src="{{.PhotoURL}}" alt="Foto actual del vehículo">
+                </div>
+                <label class="checkbox-field">
+                    <input type="checkbox" name="delete_photo">
+                    Eliminar foto actual
+                </label>
+                {{end}}
+
+                <div class="photo-upload" id="photoUpload">
+                    <input type="file" name="photo" accept="image/*" capture="environment" id="photoInput">
+                    <div class="photo-upload-icon">📷</div>
+                    <div class="photo-upload-text">
+                        <strong>Toca para tomar foto</strong> o seleccionar {{if .PhotoURL}}otra{{else}}una{{end}} imagen
+                    </div>
+                </div>
+                <img id="photoPreview" class="photo-preview" alt="Vista previa">
+            </div>
+
+            <button type="submit" class="btn-submit">Guardar cambios</button>
+            <a href="/vehiculos/{{.ID}}/" class="btn-cancel">Cancelar</a>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview = document.getElementById('photoPreview');
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+                document.querySelector('.photo-upload-icon').style.display = 'none';
+                document.querySelector('.photo-upload-text').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+
+</body>
+</html>

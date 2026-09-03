@@ -75,10 +75,17 @@
             padding: 1rem;
         }
 
+        .vehicle-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
         .vehicle-title {
             font-size: 1.3rem;
             font-weight: 700;
-            margin-bottom: 0.25rem;
         }
 
         .vehicle-plate-big {
@@ -156,6 +163,13 @@
             display: flex;
             gap: 1rem;
             align-items: flex-start;
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .maintenance-item:active {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .maintenance-date {
@@ -195,6 +209,13 @@
             margin-top: 0.2rem;
         }
 
+        .maintenance-chevron {
+            color: #ccc;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
         .empty-state {
             text-align: center;
             padding: 2rem;
@@ -223,7 +244,10 @@
             {{end}}
         </div>
         <div class="vehicle-details">
-            <div class="vehicle-title">{{.Maker}} {{.Model}} {{.Year}}</div>
+            <div class="vehicle-title-row">
+                <div class="vehicle-title">{{.Maker}} {{.Model}} {{.Year}}</div>
+                <a href="/vehiculos/{{.ID}}/editar" class="btn">Editar</a>
+            </div>
             <div class="vehicle-plate-big">{{.Plate}}</div>
             <div class="detail-grid">
                 <div class="detail-item">
@@ -236,11 +260,11 @@
                 </div>
                 <div class="detail-item">
                     <label>Último servicio</label>
-                    <span>{{.LastService}}</span>
+                    <span>{{formatDate .LastService}}</span>
                 </div>
                 <div class="detail-item">
                     <label>Última reparación</label>
-                    <span>{{.LastRepair}}</span>
+                    <span>{{formatDate .LastRepair}}</span>
                 </div>
             </div>
         </div>
@@ -254,14 +278,15 @@
     <div class="maintenance-list">
         {{if .Records}}
             {{range .Records}}
-            <div class="maintenance-item">
-                <div class="maintenance-date">{{.DateShort}}</div>
+            <a href="/vehiculos/{{$.ID}}/registro/{{.ID}}" class="maintenance-item">
+                <div class="maintenance-date">{{formatDate .DateShort}}</div>
                 <div class="maintenance-body">
                     <div class="maintenance-type">{{.Type}}</div>
                     <div class="maintenance-desc">{{.Description}}</div>
                     {{if .Cost}}<div class="maintenance-cost">💰 ${{.Cost}}</div>{{end}}
                 </div>
-            </div>
+                <span class="maintenance-chevron">›</span>
+            </a>
             {{end}}
         {{else}}
             <div class="empty-state">Sin registros aún.<br>Agrega el primer servicio.</div>

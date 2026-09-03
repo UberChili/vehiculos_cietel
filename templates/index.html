@@ -279,7 +279,7 @@
                 <div class="vehicle-meta">
                     <span class="meta-item">👤 <strong>{{.AssignedTo}}</strong></span>
                     <span class="meta-item">📍 {{.Location}}</span>
-                    <span class="meta-item">🔧 Último servicio: <strong>{{.LastService}}</strong></span>
+                    <span class="meta-item">🔧 Último servicio: <strong>{{formatDate .LastService}}</strong></span>
                 </div>
             </div>
             <span class="chevron">›</span>
@@ -309,7 +309,7 @@
                     </td>
                     <td>{{.Maker}} {{.Model}}</td>
                     <td>{{.Year}}</td>
-                    <td>{{.LastService}}</td>
+                    <td>{{formatDate .LastService}}</td>
                     <td>{{.AssignedTo}}</td>
                     <td>{{.Location}}</td>
                 </tr>

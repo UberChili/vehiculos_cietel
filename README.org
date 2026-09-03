@@ -1,24 +1,219 @@
 #+title: Control de información para vehículos de CIETEL
 
 * Introducción
-Software para mantener un control (o al menos información actualizada) sobre los vehículos de CIETEL y sus respectivas reparaciones o mantenimientos.
-* Idea principal
-Un supervisor puede consultar la información de todos los vehículos de manera sencilla.
-Al principio, al menos lo siguiente:
-- [X] Información del vehículo (marca, modelo, placas)
-- [X] Técnico asignado
-- [X] Última fecha de servicio
-- [ ] Registro de reparaciones
 
-Visible en una página compuesta por HTML y CSS sencillo. Minimalista pero bien utilizable tanto en computadora como en móvil.
+Aplicación web para mantener un control centralizado y actualizado sobre los
+vehículos de la flotilla de CIETEL: información general de cada vehículo,
+técnico/ubicación asignada, y su historial de servicios y reparaciones.
 
-* Funcionamiento básico
-- [X] Página principal (Una lista simple de todos los vehículos)
-- [X] Seleccionar un vehículo y obtener su información completa en su propia página
-- [ ] Ingresar vehículos
-- [ ] Ingresar servicios
-- [ ] Ingresar reparaciones
-- [ ] Modificar información de vehículo
+Un supervisor puede, desde el navegador (computadora o móvil), consultar de
+un vistazo el estado de todos los vehículos, dar de alta vehículos nuevos y
+llevar el registro de cada mantenimiento o reparación realizada.
+
+Está escrita en Go, usa SQLite como base de datos (un solo archivo, sin
+servidor de base de datos aparte) y sirve HTML renderizado en el servidor
+(sin frameworks de JavaScript), pensado para ser simple de correr y de
+mantener.
+
+* Estado actual
+
+** Implementado
+- [X] Listado de todos los vehículos (tarjetas en móvil, tabla en escritorio)
+- [X] Página de detalle por vehículo (marca, modelo, año, placas, foto,
+  técnico asignado, ubicación)
+- [X] Último servicio y última reparación, calculados automáticamente a
+  partir del historial de registros (no se capturan a mano)
+- [X] Alta de vehículos nuevos, con foto opcional
+- [X] Validación de datos en servidor (no solo en el navegador)
+- [X] Alta de registros de servicio/reparación por vehículo
+- [X] Página de detalle de un registro individual, con la foto del
+  vehículo (si tiene) y el resto del historial debajo, ordenado del más
+  reciente al más antiguo
+- [X] Eliminar un registro de servicio/reparación
+- [X] Editar la información de un vehículo ya existente (incluyendo
+  reemplazar o eliminar su foto)
+- [X] Avisos contextuales en el formulario de registro: recordatorio del
+  formato de fecha, y una sugerencia para agregar notas cuando el tipo es
+  "Reparación"
+- [X] Fechas mostradas de forma consistente en toda la interfaz como
+  =dd-mm-aaaa= (por ejemplo, 02-09-2026), sin importar cómo se guardan
+  internamente
+- [X] Pruebas automatizadas (=go test ./...=) cubriendo validaciones,
+  consultas a la base de datos y las rutas HTTP más sensibles
+
+** Pendiente
+- [ ] Eliminar un vehículo
+- [ ] Editar o corregir un registro ya creado (por ahora solo se puede
+  eliminar y volver a capturar)
+- [ ] Recordatorios de servicio próximo a vencer
+- [ ] Autenticación / control de acceso (hoy cualquiera con la URL puede
+  usar la aplicación)
+
+* Uso
+
+** Requisitos
+
+- Go 1.25 o superior.
+- Un compilador de C (gcc o equivalente), porque el driver de SQLite
+  (=mattn/go-sqlite3=) usa cgo.
+- No se necesita instalar SQLite por separado ni levantar un servidor de
+  base de datos: todo vive en el archivo =vehicles.db=, que se crea solo la
+  primera vez que se ejecuta la aplicación.
+
+** Ejecutar el proyecto
+
+Desde la raíz del repositorio:
+
+#+begin_src sh
+go run .
+#+end_src
+
+El servidor queda escuchando en el puerto ~8080~. La aplicación vive bajo el
+prefijo =/vehiculos=, por ejemplo:
+
+http://localhost:8080/vehiculos
+
+Al iniciar por primera vez se crean automáticamente:
+- El archivo =vehicles.db= con las tablas =vehicles= y =records=.
+- La carpeta =uploads/=, donde se guardan las fotos de los vehículos que se
+  suban.
+
+Ambos están excluidos del control de versiones (ver =.gitignore=), ya que
+son datos locales de cada instalación, no parte del código fuente.
+
+** Ejecutar las pruebas
+
+#+begin_src sh
+go test ./...
+#+end_src
+
+Las pruebas no tocan =vehicles.db= ni =uploads/=: cada una abre su propia
+base de datos SQLite temporal (y, cuando escriben una foto, su propia
+carpeta temporal también), así que correrlas no afecta los datos reales de
+la instalación.
+
+** Estructura del proyecto
+
+| Archivo/carpeta     | Contenido                                                        |
+|---------------------+-------------------------------------------------------------------|
+| =main.go=           | Arranque del servidor, registro de rutas (usando =chi=)           |
+| =handlers.go=       | Manejadores HTTP: qué hacer con cada petición                     |
+| =db.go=             | Creación/migración del esquema y consultas de escritura           |
+| =vehicles.go=       | Tipos de datos (=Vehicle=, =Record=), validaciones, consultas de lectura, manejo de fotos (subir/eliminar) |
+| =helpers.go=        | Utilidades genéricas (capitalizar texto, formatear fechas para mostrar) |
+| =*_test.go=         | Pruebas automatizadas (validaciones, base de datos, rutas HTTP)   |
+| =templates/=        | Plantillas HTML (una por página)                                  |
+| =uploads/=          | Fotos subidas por los usuarios (se genera al usar la app)         |
+| =vehicles.db=       | Base de datos SQLite (se genera al usar la app)                   |
+
+** Rutas disponibles
+
+| Método | Ruta                                          | Qué hace                                          |
+|--------+------------------------------------------------+----------------------------------------------------|
+| GET    | =/vehiculos=                                  | Lista de todos los vehículos                       |
+| GET    | =/vehiculos/{id}=                             | Detalle de un vehículo y su historial              |
+| GET    | =/vehiculos/new=                              | Formulario para dar de alta un vehículo            |
+| POST   | =/vehiculos/new=                              | Guarda el vehículo nuevo                           |
+| GET    | =/vehiculos/{id}/nuevo-registro=              | Formulario para agregar un servicio/reparación     |
+| POST   | =/vehiculos/{id}/nuevo-registro=              | Guarda el registro nuevo                           |
+| GET    | =/vehiculos/{id}/registro/{record_id}=        | Detalle de un registro específico                  |
+| POST   | =/vehiculos/{id}/registro/{record_id}/eliminar= | Elimina ese registro                             |
+| GET    | =/vehiculos/{id}/editar=                      | Formulario para editar un vehículo                 |
+| POST   | =/vehiculos/{id}/editar=                      | Guarda los cambios del vehículo                    |
+| GET    | =/uploads/*=                                  | Sirve las fotos subidas                            |
+
+** Manual de uso
+
+*** Ver la lista de vehículos
+
+Al entrar a =/vehiculos= se muestra la flotilla completa: placas, vehículo,
+año, último servicio, técnico asignado y ubicación. En móvil se ve como
+tarjetas; en pantallas más anchas, como tabla. Haciendo clic en cualquier
+vehículo se entra a su detalle.
+
+*** Ver el detalle de un vehículo
+
+Muestra la foto (si tiene), datos generales, técnico asignado, ubicación,
+fecha del último servicio y de la última reparación (calculadas solas a
+partir del historial, no hay que capturarlas a mano), y debajo la lista
+completa de servicios y reparaciones registrados. Cada elemento de esa
+lista es clickeable y lleva al detalle de ese registro.
+
+*** Agregar un vehículo nuevo
+
+Desde el botón "+ Agregar" en la lista principal. Campos obligatorios:
+placa, marca, modelo y año. Técnico asignado, ubicación y foto son
+opcionales. La foto acepta jpg, jpeg, png, gif o webp.
+
+*** Editar un vehículo
+
+Desde el botón "Editar" en el detalle del vehículo. El formulario abre con
+los datos actuales precargados. Sobre la foto:
+- Subir un archivo nuevo la reemplaza (se borra la anterior).
+- Si ya tiene foto, aparece la casilla "Eliminar foto actual" para
+  quitarla sin subir una nueva.
+- Si no se toca ninguna de las dos opciones, la foto existente se
+  conserva tal cual.
+
+*** Agregar un registro de servicio o reparación
+
+Desde el botón "+ Agregar" dentro del detalle de un vehículo. Se debe
+indicar el tipo (Servicio o Reparación), la fecha (formato día-mes-año), y
+una descripción; el costo es opcional. Al elegir el tipo "Reparación"
+aparece un recordatorio para anotar detalles relevantes (si la atendió
+otro mecánico, algo fuera de lo común, etc.).
+
+El campo de fecha usa el selector nativo del navegador, así que su
+apariencia exacta (calendario, formato al escribir a mano) depende del
+navegador/sistema operativo del usuario; el recordatorio en pantalla es
+solo una guía. Donde sí es 100% consistente es al *mostrar* fechas ya
+guardadas: en toda la aplicación (listas, detalle de vehículo, detalle de
+registro) siempre se ven como =dd-mm-aaaa=.
+
+*** Ver y eliminar un registro
+
+Al hacer clic en un registro desde el detalle del vehículo se muestra su
+información completa (tipo, fecha, descripción, costo), la foto del
+vehículo al que pertenece (si tiene una) y, debajo, el resto del
+historial de ese vehículo ordenado del más reciente al más antiguo, para
+poder moverse entre registros sin volver a la página del vehículo.
+
+El botón "Eliminar registro" borra ese registro de forma permanente (pide
+confirmación antes de hacerlo, ya que no se puede deshacer).
+
+* Modelo de datos
+
+** =vehicles=
+
+| Columna       | Descripción                                    |
+|---------------+--------------------------------------------------|
+| =id=          | Identificador autogenerado                     |
+| =plate=       | Placa (máximo 10 caracteres)                   |
+| =maker=       | Marca                                          |
+| =model=       | Modelo                                         |
+| =year=        | Año                                            |
+| =assigned_to= | Técnico asignado (opcional)                    |
+| =location=    | Ubicación (opcional)                           |
+| =photo_url=   | Ruta de la foto subida (opcional)              |
+
+El último servicio y la última reparación *no* se guardan en esta tabla:
+se calculan al consultar, tomando la fecha más reciente entre los
+registros de ese vehículo de cada tipo.
+
+** =records=
+
+| Columna        | Descripción                                              |
+|----------------+-------------------------------------------------------------|
+| =id=           | Identificador autogenerado                               |
+| =vehicle_id=   | Vehículo al que pertenece (borra en cascada con el vehículo) |
+| =date=         | Fecha en formato ISO (=AAAA-MM-DD=) — se muestra como =dd-mm-aaaa= |
+| =type=         | "Servicio" o "Reparación"                                 |
+| =description=  | Descripción libre                                          |
+| =cost=         | Costo (opcional)                                            |
 
 * Ideas a futuro
-- [ ] Recordatorios de servicio
+
+- [ ] Eliminar vehículos
+- [ ] Recordatorios de servicio próximo a vencer
+- [ ] Autenticación / control de acceso por usuario
+- [ ] Búsqueda o filtros en la lista de vehículos

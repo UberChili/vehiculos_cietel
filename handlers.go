@@ -109,7 +109,6 @@ func (a *App) NewRecordHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.Method == "POST" {
-		// TODO
 		if parse_err := req.ParseForm(); parse_err != nil {
 			log.Println("Could not parse form values:", parse_err)
 			a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "No se pudo procesar el formulario enviado. Intenta de nuevo.")
@@ -129,6 +128,181 @@ func (a *App) NewRecordHandler(w http.ResponseWriter, req *http.Request) {
 
 		// Register added with no errors. Now redirect
 		http.Redirect(w, req, "/vehiculos/", http.StatusSeeOther)
+		return
+	}
+}
+
+func (a *App) RecordHandler(w http.ResponseWriter, req *http.Request) {
+	vehicleIDParam := chi.URLParam(req, "id")
+	vehicleID, err := strconv.Atoi(vehicleIDParam)
+	if err != nil {
+		a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del vehículo no es válido.")
+		return
+	}
+
+	recordIDParam := chi.URLParam(req, "record_id")
+	recordID, err := strconv.Atoi(recordIDParam)
+	if err != nil {
+		a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del registro no es válido.")
+		return
+	}
+
+	vehicle, err := a.GetVehicleByID(vehicleID)
+	if errors.Is(err, sql.ErrNoRows) {
+		a.RenderError(w, http.StatusNotFound, "No encontrado", "No existe un vehículo con ese identificador.")
+		return
+	}
+	if err != nil {
+		log.Println("Could not get vehicle from database:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar el vehículo.")
+		return
+	}
+
+	record, err := a.GetRecordByID(vehicleID, recordID)
+	if errors.Is(err, sql.ErrNoRows) {
+		a.RenderError(w, http.StatusNotFound, "No encontrado", "No existe un registro con ese identificador para este vehículo.")
+		return
+	}
+	if err != nil {
+		log.Println("Could not get record from database:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar el registro.")
+		return
+	}
+
+	// GetVehicleRecordsByID already orders latest-first; just drop the one
+	// being viewed to build the "other records" list.
+	allRecords, err := a.GetVehicleRecordsByID(vehicleID)
+	if err != nil {
+		log.Println("Error when querying for records:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar los registros de vehículo.")
+		return
+	}
+	var otherRecords []Record
+	for _, other := range allRecords {
+		if other.ID != record.ID {
+			otherRecords = append(otherRecords, other)
+		}
+	}
+
+	data := struct {
+		Vehicle      Vehicle
+		Record       Record
+		OtherRecords []Record
+	}{Vehicle: vehicle, Record: record, OtherRecords: otherRecords}
+
+	var buf bytes.Buffer
+	if err := a.tmpl.ExecuteTemplate(&buf, "record.html", data); err != nil {
+		log.Println("Error rendering record.html:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página.")
+		return
+	}
+	buf.WriteTo(w)
+}
+
+func (a *App) DeleteRecordHandler(w http.ResponseWriter, req *http.Request) {
+	vehicleIDParam := chi.URLParam(req, "id")
+	vehicleID, err := strconv.Atoi(vehicleIDParam)
+	if err != nil {
+		a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del vehículo no es válido.")
+		return
+	}
+
+	recordIDParam := chi.URLParam(req, "record_id")
+	recordID, err := strconv.Atoi(recordIDParam)
+	if err != nil {
+		a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del registro no es válido.")
+		return
+	}
+
+	if err := a.DeleteRecord(vehicleID, recordID); err != nil {
+		log.Println("Error deleting record from database:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al eliminar el registro.")
+		return
+	}
+
+	http.Redirect(w, req, "/vehiculos/"+vehicleIDParam+"/", http.StatusSeeOther)
+}
+
+func (a *App) EditVehicleHandler(w http.ResponseWriter, req *http.Request) {
+	idParam := chi.URLParam(req, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "El identificador del vehículo no es válido.")
+		return
+	}
+
+	vehicle, err := a.GetVehicleByID(id)
+	if errors.Is(err, sql.ErrNoRows) {
+		a.RenderError(w, http.StatusNotFound, "No encontrado", "No existe un vehículo con ese identificador.")
+		return
+	}
+	if err != nil {
+		log.Println("Could not get vehicle from database:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar el vehículo.")
+		return
+	}
+
+	if req.Method == "GET" {
+		var buf bytes.Buffer
+		if err := a.tmpl.ExecuteTemplate(&buf, "edit_vehicle.html", vehicle); err != nil {
+			log.Println("Error rendering edit_vehicle.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al cargar la página. Intenta de nuevo.")
+			return
+		}
+		buf.WriteTo(w)
+		return
+	}
+
+	if req.Method == "POST" {
+		req.Body = http.MaxBytesReader(w, req.Body, 20<<20)
+		maxMemory := int64(10 << 20)
+		if parse_err := req.ParseMultipartForm(maxMemory); parse_err != nil {
+			log.Println("Could not parse form values:", parse_err)
+			a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", "No se pudo procesar el formulario enviado. Intenta de nuevo.")
+			return
+		}
+
+		new_photo_url, photo_err := SavePhoto(req)
+		if photo_err != nil {
+			var verr *ValidationError
+			if errors.As(photo_err, &verr) {
+				a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", verr.Message)
+				return
+			}
+			log.Println("Error saving vehicle photo:", photo_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al guardar la foto.")
+			return
+		}
+
+		updated_vehicle := NewVehicleFromForm(req)
+		updated_vehicle.ID = id
+
+		// A newly uploaded photo always wins; otherwise the "delete_photo"
+		// checkbox clears it; otherwise the existing photo is kept as-is.
+		delete_photo := req.PostFormValue("delete_photo") == "on"
+		switch {
+		case new_photo_url != "":
+			deleteUploadedPhoto(vehicle.PhotoURL)
+			updated_vehicle.PhotoURL = new_photo_url
+		case delete_photo:
+			deleteUploadedPhoto(vehicle.PhotoURL)
+			updated_vehicle.PhotoURL = ""
+		default:
+			updated_vehicle.PhotoURL = vehicle.PhotoURL
+		}
+
+		if update_err := a.UpdateVehicle(updated_vehicle); update_err != nil {
+			var verr *ValidationError
+			if errors.As(update_err, &verr) {
+				a.RenderError(w, http.StatusBadRequest, "Solicitud inválida", verr.Message)
+				return
+			}
+			log.Println("Error updating vehicle in database:", update_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al actualizar el vehículo.")
+			return
+		}
+
+		http.Redirect(w, req, "/vehiculos/"+idParam+"/", http.StatusSeeOther)
 		return
 	}
 }

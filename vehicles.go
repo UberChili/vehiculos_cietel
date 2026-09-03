@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,6 +32,7 @@ func (e *ValidationError) Error() string {
 }
 
 type Record struct {
+	ID          int
 	DateShort   string
 	Type        string
 	Description string
@@ -71,8 +73,6 @@ func NewVehicleFromForm(r *http.Request) Vehicle {
 }
 
 func NewRecordFromForm(r *http.Request) Record {
-	// process and sanitize strings
-	// TODO ?
 	date_short := r.FormValue("date")
 	record_type := r.FormValue("type")
 	description := r.FormValue("description")
@@ -85,6 +85,12 @@ func NewRecordFromForm(r *http.Request) Record {
 func (r Record) Validate() error {
 	if strings.TrimSpace(r.DateShort) == "" {
 		return &ValidationError{"La fecha es obligatoria"}
+	}
+	// <input type="date"> always submits ISO format (YYYY-MM-DD) regardless
+	// of locale, and time.Parse rejects out-of-range days/months (e.g. Feb 30)
+	// on its own.
+	if _, err := time.Parse("2006-01-02", r.DateShort); err != nil {
+		return &ValidationError{"La fecha no es válida"}
 	}
 	if strings.TrimSpace(r.Type) == "" {
 		return &ValidationError{"Seleccionar un tipo de reparación es obligatorio"}
@@ -150,19 +156,47 @@ func SavePhoto(r *http.Request) (string, error) {
 	return "/" + uploadDir + "/" + filename, nil
 }
 
+// deleteUploadedPhoto removes a previously saved photo from disk when it's
+// being replaced or cleared. Failures are only logged, not returned: a
+// leftover file is harmless, and shouldn't block the vehicle update that
+// triggered it.
+func deleteUploadedPhoto(photoURL string) {
+	prefix := "/" + uploadDir + "/"
+	if photoURL == "" || !strings.HasPrefix(photoURL, prefix) {
+		return
+	}
+	path := filepath.Join(uploadDir, strings.TrimPrefix(photoURL, prefix))
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		log.Println("Could not delete old vehicle photo:", err)
+	}
+}
+
+// last_service/last_repair are derived from the records table (most recent
+// date per record type) rather than read from the vehicles.last_service
+// column, which nothing ever writes to. Dates are stored as ISO 8601
+// (YYYY-MM-DD), so MAX() on the text column sorts chronologically.
+const vehicleSelect = `
+	SELECT v.id, v.plate, v.maker, v.model, v.year, v.assigned_to, v.location, v.photo_url,
+		COALESCE((SELECT MAX(date) FROM records WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service,
+		COALESCE((SELECT MAX(date) FROM records WHERE vehicle_id = v.id AND type = 'Reparación'), '') AS last_repair
+	FROM vehicles v`
+
+func scanVehicle(row interface{ Scan(...any) error }, v *Vehicle) error {
+	return row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
+		&v.Location, &v.PhotoURL, &v.LastService, &v.LastRepair)
+}
+
 func (a *App) GetVehicleByID(id int) (Vehicle, error) {
 	var v Vehicle
-	row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location, last_service, photo_url FROM vehicles WHERE id = ?", id)
-	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
-		&v.Location, &v.LastService, &v.PhotoURL)
-	if err != nil {
+	row := a.db.QueryRow(vehicleSelect+" WHERE v.id = ?", id)
+	if err := scanVehicle(row, &v); err != nil {
 		return v, err
 	}
 	return v, nil
 }
 
 func (a *App) GetVehicleRecordsByID(id int) ([]Record, error) {
-	rows, err := a.db.Query("SELECT date, type, description, cost FROM records WHERE vehicle_id = ?", id)
+	rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ? ORDER BY date DESC, id DESC", id)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +204,7 @@ func (a *App) GetVehicleRecordsByID(id int) ([]Record, error) {
 	var records []Record
 	for rows.Next() {
 		var r Record
-		if err := rows.Scan(&r.DateShort, &r.Type, &r.Description, &r.Cost); err != nil {
+		if err := rows.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost); err != nil {
 			return records, err
 		}
 		records = append(records, r)
@@ -182,8 +216,20 @@ func (a *App) GetVehicleRecordsByID(id int) ([]Record, error) {
 	return records, nil
 }
 
+// GetRecordByID scopes the lookup to vehicle_id so a record can't be viewed
+// through a URL for a vehicle it doesn't belong to.
+func (a *App) GetRecordByID(vehicleID, recordID int) (Record, error) {
+	var r Record
+	row := a.db.QueryRow("SELECT id, date, type, description, cost FROM records WHERE id = ? AND vehicle_id = ?", recordID, vehicleID)
+	err := row.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost)
+	if err != nil {
+		return r, err
+	}
+	return r, nil
+}
+
 func (a *App) GetVehicles() ([]Vehicle, error) {
-	rows, err := a.db.Query("SELECT id, plate, maker, model, year, assigned_to, location, last_service, photo_url FROM vehicles")
+	rows, err := a.db.Query(vehicleSelect)
 	if err != nil {
 		return nil, err
 	}
@@ -194,8 +240,7 @@ func (a *App) GetVehicles() ([]Vehicle, error) {
 	// Loop through rows, using Scan to assign column data to struct fields
 	for rows.Next() {
 		var v Vehicle
-		if err := rows.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
-			&v.Location, &v.LastService, &v.PhotoURL); err != nil {
+		if err := scanVehicle(rows, &v); err != nil {
 			return vehicles, err
 		}
 		vehicles = append(vehicles, v)

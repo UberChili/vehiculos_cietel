@@ -43,20 +43,38 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 }
 
 func (a App) GetVehicle(id string) (Vehicle, error) {
-	row := a.db.QueryRow("SELECT h FROM vehicles WHERE id = ?", id)
+	row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles WHERE id = ?", id)
 
 	v := Vehicle{}
 
 	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
-		&v.Location, &v.LastService, &v.PhotoURL)
+		&v.Location)
 
+	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
 		return Vehicle{}, errors.New("Vehicle not found")
 	}
+
+	records_rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ?", id)
+	if err != nil {
+		v.Records = nil
+		return v, err
+	}
+
+	for records_rows.Next() {
+		r := &Record{}
+		err := records_rows.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost)
+
+		if err != nil {
+			continue
+		}
+		v.Records = append(v.Records, *r)
+	}
+
 	return v, nil
 }
 
-func (a App) GetLastRepair(vehicle Vehicle) Record {
+func (a App) GetLastServiceOrRepair(vehicle Vehicle) Record {
 	row := a.db.QueryRow("SELECT * FROM records WHERE id = ? ORDER BY DATE", vehicle.ID)
 
 	var r Record

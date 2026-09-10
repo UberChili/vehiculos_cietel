@@ -58,7 +58,7 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 
 		vehicle, v_err := a.GetVehicle(chi.URLParam(r, "id"))
 		if v_err != nil {
-			log.Println("Error getting vehicle with id: %d: %s\n", chi.URLParam(r, "id"), v_err)
+			log.Printf("Error getting vehicle with id: %s: %s\n", chi.URLParam(r, "id"), v_err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "No se encontró el vehículo.")
 			return
 		}
@@ -104,7 +104,7 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		location := strings.ToLower(r.FormValue("location"))
 		photo := r.FormValue("photo")
 
-		vehicle := Vehicle{plate, maker, model, year, assigned_to, location, photo}
+		vehicle := Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: assigned_to, Location: location, PhotoURL: photo}
 		vehicle_validation_err := ValidateVehicleFields(vehicle)
 		if vehicle_validation_err != nil {
 			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)

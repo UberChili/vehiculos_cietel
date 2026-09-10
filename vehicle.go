@@ -2,10 +2,10 @@ package main
 
 type Vehicle struct {
 	ID          int
+	Plate       string
 	Maker       string
 	Model       string
 	Year        string
-	Plate       string
 	LastService string
 	LastRepair  string
 	AssignedTo  string

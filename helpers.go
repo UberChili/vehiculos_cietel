@@ -1,6 +1,12 @@
 package main
 
-import "time"
+import (
+	"errors"
+	"slices"
+	"strconv"
+	"time"
+	"unicode"
+)
 
 // FormatDateDisplay converts a date stored as ISO 8601 (YYYY-MM-DD) into
 // dd-mm-yyyy, the format shown to users everywhere in the UI. Dates stay
@@ -14,4 +20,35 @@ func FormatDateDisplay(iso string) string {
 		return iso
 	}
 	return t.Format("02-01-2006")
+}
+
+// helper function to capitalize strings
+func CapitalizeFirst(text string) string {
+	if text == "" {
+		return ""
+	}
+	runes := []rune(text)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
+}
+
+func ValidateVehicleFields(vehicle Vehicle) error {
+	if len(vehicle.Plate) >= 10 {
+		return errors.New("Invalid Plate.")
+	}
+	if !slices.Contains(Makers, vehicle.Maker) {
+		return errors.New("Invalid maker. Not in list of makers.")
+	}
+	if !slices.Contains(Models, vehicle.Model) {
+		return errors.New("Invalid maker. Not in list of makers.")
+	}
+	year, err := strconv.Atoi(vehicle.Maker)
+	if err != nil {
+		return err
+	}
+	if year >= 2027 || year <= 2009 {
+		return errors.New("Invalid Year.")
+	}
+
+	return nil
 }

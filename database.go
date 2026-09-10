@@ -19,7 +19,7 @@ func OpenDatabase() *sql.DB {
 }
 
 func (a App) findAllVehicles() ([]Vehicle, error) {
-	query := `SELECT * FROM vehicles ORDER BY LOCATION`
+	query := `SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles ORDER BY LOCATION`
 
 	rows, err := a.db.Query(query)
 	if err != nil {
@@ -32,8 +32,8 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 	for rows.Next() {
 		v := &Vehicle{}
 		err := rows.Scan(
-			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.Location,
-			&v.LastService, &v.PhotoURL)
+			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.Location)
+
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 }
 
 func (a App) GetVehicle(id string) (Vehicle, error) {
-	row := a.db.QueryRow("SELECT * FROM vehicles WHERE id = ?", id)
+	row := a.db.QueryRow("SELECT h FROM vehicles WHERE id = ?", id)
 
 	v := Vehicle{}
 

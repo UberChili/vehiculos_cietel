@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -78,5 +79,38 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		fmt.Println("POST method called on VehicleHandler with id",
 			chi.URLParam(r, "id"))
+	}
+}
+
+func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		var buf bytes.Buffer
+		err := a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", nil)
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+
+		fmt.Fprintf(w, "%s", buf.Bytes())
+	}
+
+	if r.Method == http.MethodPost {
+		plate := strings.ToUpper(r.FormValue("plate"))
+		maker := strings.ToLower(r.FormValue("maker"))
+		model := strings.ToLower(r.FormValue("model"))
+		year := r.FormValue("year")
+		assigned_to := strings.ToLower(r.FormValue("assigned_to"))
+		location := strings.ToLower(r.FormValue("location"))
+		photo := r.FormValue("photo")
+
+		vehicle := Vehicle{plate, maker, model, year, assigned_to, location, photo}
+		vehicle_validation_err := ValidateVehicleFields(vehicle)
+		if vehicle_validation_err != nil {
+			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)
+			message := fmt.Sprintf("Valores de vehículo inválidos: %s\n", vehicle_validation_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
 	}
 }

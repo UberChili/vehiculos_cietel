@@ -14,6 +14,9 @@ type Vehicle struct {
 	PhotoURL    string
 }
 
+var Makers = []string{"chevrolet", "hyundai", "ford"}
+var Models = []string{"spark", "chevy", "ikon", "atos"}
+
 type Record struct {
 	ID          int
 	DateShort   string

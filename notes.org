@@ -1,6 +1,9 @@
 #+title: Notes
 
-* Things to consider to implement inserting vehicles
+
+* TODO Switch to use *Stored Procedures*
+* TODO Insert new vehicle
+** Things to consider to implement inserting vehicles
 Concepts to research/use, in order:
 
 1. Parsing the request — because the form is multipart (has a file), you need r.ParseMultipartForm(maxMemory) before reading values, not just r.ParseForm(). Look at the net/http docs for Request.ParseMultipartForm. maxMemory is the max bytes kept in RAM before spilling to disk — something like 10 << 20 (10MB) is typical.
@@ -13,3 +16,7 @@ A few things worth noticing on your own once you try it:
 - a.tmpl and how a (the App struct) gives you access to the DB handle for step 5.
 - What happens today if you POST without a photo, given the field isn't required.
 - Where PhotoURL in your Vehicle struct would come from once you handle the upload.
+
+* TODO Insertar reparación o servicio
+* TODO Una tabla para técnicos.
+Now that I think about it, it shouldn't be possible to add two vehicles assigned to the same technician. So, we must check if a vehicle is assigned to a technician before actually assigning it, and this would imply that we need a database/table of all the currently "available" technicians

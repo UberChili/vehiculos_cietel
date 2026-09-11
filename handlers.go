@@ -104,6 +104,14 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		location := strings.ToLower(r.FormValue("location"))
 		photo := r.FormValue("photo")
 
+		// Check if vehicle is not already assigned
+		if IsAssigned(assigned_to) {
+			log.Printf("Can't assign vehicle to technician %q. Technician already has a vehicle\n", assigned_to)
+			message := fmt.Sprintf("No se puede agregar vehículo\nTécnico %q ya tiene un vehículo.\n", assigned_to)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+
 		vehicle := Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: assigned_to, Location: location, PhotoURL: photo}
 		vehicle_validation_err := ValidateVehicleFields(vehicle)
 		if vehicle_validation_err != nil {

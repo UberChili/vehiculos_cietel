@@ -42,7 +42,7 @@ func ValidateVehicleFields(vehicle Vehicle) error {
 	if !slices.Contains(Models, vehicle.Model) {
 		return errors.New("Invalid maker. Not in list of makers.")
 	}
-	year, err := strconv.Atoi(vehicle.Maker)
+	year, err := strconv.Atoi(vehicle.Year)
 	if err != nil {
 		return err
 	}

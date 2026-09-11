@@ -85,3 +85,9 @@ func (a App) GetLastServiceOrRepair(vehicle Vehicle) Record {
 	}
 	return r
 }
+
+// Checks is a vehicle is already assigned to a worker
+// This would mean that another vehicle can not be assigned to the same worker
+func (a *App) IsAssigned(technician_name string) bool {
+
+}

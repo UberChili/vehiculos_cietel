@@ -8,14 +8,14 @@ type Vehicle struct {
 	Year        string
 	LastService string
 	LastRepair  string
-	AssignedTo  string
+	AssignedTo  int
 	Location    string
 	Records     []Record
 	PhotoURL    string
 }
 
 var Makers = []string{"chevrolet", "hyundai", "ford"}
-var Models = []string{"spark", "chevy", "ikon", "atos"}
+var Models = []string{"spark", "chevy", "ikon", "atos", "courier", "tornado"}
 
 type Record struct {
 	ID          int

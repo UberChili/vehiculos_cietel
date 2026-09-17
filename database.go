@@ -86,8 +86,22 @@ func (a App) GetLastServiceOrRepair(vehicle Vehicle) Record {
 	return r
 }
 
+func (a *App) InsertNewVehicle(vehicle Vehicle) error {
+	stmt := `INSERT INTO vehicles (
+	plate, maker, model, year, assigned_to,
+	location, photo_url) VALUES(?, ?, ?, ?, ?, ?, ?);`
+
+	_, err := a.db.Exec(stmt, vehicle.Plate, vehicle.Maker,
+		vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.PhotoURL)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Checks is a vehicle is already assigned to a worker
 // This would mean that another vehicle can not be assigned to the same worker
-func (a *App) IsAssigned(technician_name string) bool {
-
-}
+// func (a *App) IsAssigned(technician_name string) bool {
+// 	// row := a.db.QueryRow("SELECT * FROM technicians WHERE  = ?")
+// }

@@ -224,7 +224,15 @@
 
             <div class="field">
                 <label>Asignado a</label>
-                <input type="text" name="assigned_to" placeholder="Nombre del técnico">
+                {{/* Expects .Technicians: []Technician{ID, FirstName, LastName} from the backend.
+                     Option value is the technician's ID, not the name — POST reads it back
+                     from r.FormValue("assigned_to") to look up the row. */}}
+                <select name="assigned_to">
+                    <option value="">Sin asignar</option>
+                    {{range .Technicians}}
+                    <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
+                    {{end}}
+                </select>
             </div>
 
             <div class="field">

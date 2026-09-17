@@ -255,7 +255,13 @@
 
             <div class="field">
                 <label>Asignado a</label>
-                <input type="text" name="assigned_to" value="{{.AssignedTo}}" placeholder="Nombre del técnico">
+                {{/* Expects .Technicians: []Technician{FirstName, LastName} alongside the existing Vehicle fields */}}
+                <select name="assigned_to">
+                    <option value="" {{if not .AssignedTo}}selected{{end}}>Sin asignar</option>
+                    {{range .Technicians}}
+                    <option value="{{.FirstName}} {{.LastName}}" {{if eq $.AssignedTo (printf "%s %s" .FirstName .LastName)}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>
+                    {{end}}
+                </select>
             </div>
 
             <div class="field">

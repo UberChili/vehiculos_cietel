@@ -37,10 +37,10 @@ func ValidateVehicleFields(vehicle Vehicle) error {
 		return errors.New("Invalid Plate.")
 	}
 	if !slices.Contains(Makers, vehicle.Maker) {
-		return errors.New("Invalid maker. Not in list of makers.")
+		return errors.New("Marca inválida. No en la lista de Marcas de vehículos.")
 	}
 	if !slices.Contains(Models, vehicle.Model) {
-		return errors.New("Invalid maker. Not in list of makers.")
+		return errors.New("Modelo invalido. No en la lista de Modelos de vehículos.")
 	}
 	year, err := strconv.Atoi(vehicle.Year)
 	if err != nil {

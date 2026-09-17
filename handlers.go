@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -84,8 +85,16 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		// We might need to get the technicians list here
+		technicians, err := a.findAllTechnicians()
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+
 		var buf bytes.Buffer
-		err := a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", nil)
+		err = a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", struct{ Technicians []Technician }{technicians})
 		if err != nil {
 			log.Println("Error loading template:", err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
@@ -100,23 +109,41 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		maker := strings.ToLower(r.FormValue("maker"))
 		model := strings.ToLower(r.FormValue("model"))
 		year := r.FormValue("year")
-		assigned_to := strings.ToLower(r.FormValue("assigned_to"))
+		assigned_to := r.FormValue("assigned_to")
 		location := strings.ToLower(r.FormValue("location"))
 		photo := r.FormValue("photo")
 
 		// Check if vehicle is not already assigned
-		if IsAssigned(assigned_to) {
-			log.Printf("Can't assign vehicle to technician %q. Technician already has a vehicle\n", assigned_to)
-			message := fmt.Sprintf("No se puede agregar vehículo\nTécnico %q ya tiene un vehículo.\n", assigned_to)
+		// if a.IsAssigned(assigned_to) {
+		// 	log.Printf("Can't assign vehicle to technician %q. Technician already has a vehicle\n", assigned_to)
+		// 	message := fmt.Sprintf("No se puede agregar vehículo\nTécnico %q ya tiene un vehículo.\n", assigned_to)
+		// 	a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+		// 	return
+		// }
+
+		// convert technician id to int
+		assigned_to_int, conv_err := strconv.Atoi(assigned_to)
+		if conv_err != nil {
+			log.Println("Error in Form values. Invalid technician id conversion: ", conv_err)
+			message := fmt.Sprintf("Valores de vehículo inválidos. ID de técnico inválido: %s\n", conv_err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
 			return
 		}
 
-		vehicle := Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: assigned_to, Location: location, PhotoURL: photo}
+		vehicle := Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: assigned_to_int, Location: location, PhotoURL: photo}
 		vehicle_validation_err := ValidateVehicleFields(vehicle)
 		if vehicle_validation_err != nil {
 			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)
 			message := fmt.Sprintf("Valores de vehículo inválidos: %s\n", vehicle_validation_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+
+		// Insert
+		insert_err := a.InsertNewVehicle(vehicle)
+		if insert_err != nil {
+			log.Println("Error Inserting vehicle to table: ", insert_err)
+			message := fmt.Sprintf("Error al agregar vehículo:", insert_err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
 			return
 		}

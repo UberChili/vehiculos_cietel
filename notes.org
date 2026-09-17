@@ -1,7 +1,5 @@
 #+title: Notes
 
-
-* TODO Switch to use *Stored Procedures*
 * TODO Insert new vehicle
 ** Things to consider to implement inserting vehicles
 Concepts to research/use, in order:
@@ -20,3 +18,25 @@ A few things worth noticing on your own once you try it:
 * TODO Insertar reparación o servicio
 * TODO Una tabla para técnicos.
 Now that I think about it, it shouldn't be possible to add two vehicles assigned to the same technician. So, we must check if a vehicle is assigned to a technician before actually assigning it, and this would imply that we need a database/table of all the currently "available" technicians
+
+* Database
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+				date TEXT NOT NULL,
+				type TEXT NOT NULL,
+				description TEXT NOT NULL,
+				cost TEXT DEFAULT ''
+				);
+CREATE TABLE technicians (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL);
+CREATE TABLE vehicles (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+plate TEXT NOT NULL,
+maker TEXT NOT NULL,
+model TEXT NOT NULL,
+year TEXT NOT NULL,
+assigned_to INTEGER REFERENCES technicians(id),
+location TEXT DEFAULT '',
+last_service TEXT DEFAULT '',
+photo_url TEXT DEFAULT '');

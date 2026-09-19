@@ -41,18 +41,22 @@ func main() {
 		log.Fatal(parse_err)
 	}
 
-	db := OpenDatabase()
-	app := App{db, template}
+	db, err := InitDBandCreateOrOpenTables()
+	if err != nil {
+		log.Fatal("Error with database: ", err)
+	}
 	defer db.Close()
+	app := App{db, template}
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Welcome!"))
-	})
+	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write([]byte("Welcome!"))
+	// })
 	r.Get("/", app.IndexHandler)
 	r.Get("/vehiculos/{id}", app.VehicleHandler)
 	r.Post("/vehiculos/{id}", app.VehicleHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new", app.NewVehicleHandler)
 
+	log.Println("Server running and listening on localhost:8081")
 	_ = http.ListenAndServe(":8081", r)
 }

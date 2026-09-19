@@ -143,9 +143,11 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		insert_err := a.InsertNewVehicle(vehicle)
 		if insert_err != nil {
 			log.Println("Error Inserting vehicle to table: ", insert_err)
-			message := fmt.Sprintf("Error al agregar vehículo:", insert_err)
+			message := fmt.Sprintf("Error al agregar vehículo: %s", insert_err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
 			return
 		}
+		// return to main page
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }

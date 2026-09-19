@@ -16,8 +16,10 @@ A few things worth noticing on your own once you try it:
 - Where PhotoURL in your Vehicle struct would come from once you handle the upload.
 
 * TODO Insertar reparación o servicio
-* TODO Una tabla para técnicos. [0/2]
+* TODO Técnicos [0/3]
 Now that I think about it, it shouldn't be possible to add two vehicles assigned to the same technician. So, we must check if a vehicle is assigned to a technician before actually assigning it, and this would imply that we need a database/table of all the currently "available" technicians
+** TODO Crear página, posiblemente como opción en la página principal
+*** TODO posiblemente como /tecnicos
 ** TODO Crear formulario para insertar técnicos
 ** TODO Escribir lógica para insertar técnicos a base de datos
 

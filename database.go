@@ -8,14 +8,49 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func OpenDatabase() *sql.DB {
+func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "vehicles.db")
 	if err != nil {
-		log.Fatal("Could not open database: ", err)
+		return nil, err
 	}
 	log.Println("Successfully connected to SQLite database.")
 
-	return db
+	// Ensuring required databases exist
+	log.Println("Opening or creating tables...")
+	technicians_table_stmt := `CREATE TABLE IF NOT EXISTS technicians (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL);`
+	vehicles_table_stmt := `CREATE TABLE IF NOT EXISTS vehicles (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				plate TEXT NOT NULL,
+				maker TEXT NOT NULL,
+				model TEXT NOT NULL,
+				year TEXT NOT NULL,
+				assigned_to INTEGER REFERENCES technicians(id),
+				location TEXT DEFAULT '',
+				last_service TEXT DEFAULT '',
+				photo_url TEXT DEFAULT '');`
+	records_table_stmt := `CREATE TABLE IF NOT EXISTS records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+				date TEXT NOT NULL,
+				type TEXT NOT NULL,
+				description TEXT NOT NULL,
+				cost TEXT DEFAULT ''
+				);`
+	_, err = db.Exec(technicians_table_stmt)
+	if err != nil {
+		return nil, errors.New("Error creating technicians table")
+	}
+	_, err = db.Exec(vehicles_table_stmt)
+	if err != nil {
+		return nil, errors.New("Error creating vehicles table")
+	}
+	_, err = db.Exec(records_table_stmt)
+	if err != nil {
+		return nil, errors.New("Error creating records table")
+	}
+
+	log.Println("Succesfully opened tables.")
+	return db, nil
 }
 
 func (a App) findAllVehicles() ([]Vehicle, error) {

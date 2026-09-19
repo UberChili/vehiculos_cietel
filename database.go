@@ -3,13 +3,14 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func InitDBandCreateOrOpenTables() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "vehicles.db")
+	db, err := sql.Open("sqlite3", "vehicles.db?_foreign_keys=on")
 	if err != nil {
 		return nil, err
 	}
@@ -38,15 +39,15 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 				);`
 	_, err = db.Exec(technicians_table_stmt)
 	if err != nil {
-		return nil, errors.New("Error creating technicians table")
+		return nil, fmt.Errorf("error creating technicians table: %w", err)
 	}
 	_, err = db.Exec(vehicles_table_stmt)
 	if err != nil {
-		return nil, errors.New("Error creating vehicles table")
+		return nil, fmt.Errorf("error creating vehicles table: %w", err)
 	}
 	_, err = db.Exec(records_table_stmt)
 	if err != nil {
-		return nil, errors.New("Error creating records table")
+		return nil, fmt.Errorf("error creating records table: %w", err)
 	}
 
 	log.Println("Succesfully opened tables.")

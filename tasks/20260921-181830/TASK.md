@@ -1,6 +1,6 @@
 # fix index showing assigned technicians
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS:
 

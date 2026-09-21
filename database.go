@@ -56,7 +56,12 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 }
 
 func (a App) findAllVehicles() ([]Vehicle, error) {
-	query := `SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles ORDER BY LOCATION`
+	// query := `SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles ORDER BY LOCATION`
+	query := `SELECT v.id, v.plate, v.maker, v.model, v.year, v.assigned_to,
+			COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS assigned_to_name, v.location
+			FROM vehicles v
+			LEFT JOIN technicians t ON v.assigned_to = t.id
+			ORDER BY v.location`
 
 	rows, err := a.db.Query(query)
 	if err != nil {
@@ -69,7 +74,7 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 	for rows.Next() {
 		v := &Vehicle{}
 		err := rows.Scan(
-			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.Location)
+			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName, &v.Location)
 
 		if err != nil {
 			return nil, err
@@ -80,11 +85,17 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 }
 
 func (a App) GetVehicle(id string) (Vehicle, error) {
-	row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles WHERE id = ?", id)
+	// row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles WHERE id = ?", id)
+	query := `SELECT v.id, v.plate, v.maker, v.model, v.year, v.assigned_to,
+				COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS asigned_to_name, location
+				FROM vehicles v
+				LEFT JOIN technicians t ON v.assigned_to = t.id
+				WHERE v.id = ?`
+	row := a.db.QueryRow(query, id)
 
 	v := Vehicle{}
 
-	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo,
+	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName,
 		&v.Location)
 
 	// Not neccessarily an error, but no results

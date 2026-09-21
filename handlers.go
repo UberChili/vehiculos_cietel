@@ -121,16 +121,26 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		// 	return
 		// }
 
+		vehicle := Vehicle{}
+		// assigned_to_int := 0
+
 		// convert technician id to int
-		assigned_to_int, conv_err := strconv.Atoi(assigned_to)
-		if conv_err != nil {
-			log.Println("Error in Form values. Invalid technician id conversion: ", conv_err)
-			message := fmt.Sprintf("Valores de vehículo inválidos. ID de técnico inválido: %s\n", conv_err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
-			return
+		if assigned_to != "" {
+			assigned_to_int, conv_err := strconv.Atoi(assigned_to)
+			if conv_err != nil {
+				log.Println("Error in Form values. Invalid technician id conversion: ", conv_err)
+				message := fmt.Sprintf("Valores de vehículo inválidos. ID de técnico inválido: %s\n", conv_err)
+				a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+				return
+			}
+
+			vehicle = Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: &assigned_to_int, Location: location, PhotoURL: photo}
+		} else {
+			// Not assigned to any technician
+			vehicle = Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: nil, Location: location, PhotoURL: photo}
 		}
 
-		vehicle := Vehicle{Maker: maker, Model: model, Plate: plate, Year: year, AssignedTo: assigned_to_int, Location: location, PhotoURL: photo}
+		// Validate fields
 		vehicle_validation_err := ValidateVehicleFields(vehicle)
 		if vehicle_validation_err != nil {
 			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)
@@ -138,7 +148,6 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
 			return
 		}
-
 		// Insert
 		insert_err := a.InsertNewVehicle(vehicle)
 		if insert_err != nil {

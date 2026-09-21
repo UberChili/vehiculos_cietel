@@ -8,7 +8,7 @@ type Vehicle struct {
 	Year        string
 	LastService string
 	LastRepair  string
-	AssignedTo  int
+	AssignedTo  *int
 	Location    string
 	Records     []Record
 	PhotoURL    string

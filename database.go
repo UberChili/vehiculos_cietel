@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -25,7 +26,7 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 				maker TEXT NOT NULL,
 				model TEXT NOT NULL,
 				year TEXT NOT NULL,
-				assigned_to INTEGER REFERENCES technicians(id),
+				assigned_to INTEGER UNIQUE REFERENCES technicians(id),
 				location TEXT DEFAULT '',
 				last_service TEXT DEFAULT '',
 				photo_url TEXT DEFAULT '');`
@@ -130,14 +131,11 @@ func (a *App) InsertNewVehicle(vehicle Vehicle) error {
 	_, err := a.db.Exec(stmt, vehicle.Plate, vehicle.Maker,
 		vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.PhotoURL)
 	if err != nil {
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			return errors.New("El Técnico seleccionado ya tiene un vehículo asignado")
+		}
 		return err
 	}
-
 	return nil
 }
-
-// Checks is a vehicle is already assigned to a worker
-// This would mean that another vehicle can not be assigned to the same worker
-// func (a *App) IsAssigned(technician_name string) bool {
-// 	// row := a.db.QueryRow("SELECT * FROM technicians WHERE  = ?")
-// }

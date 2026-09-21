@@ -44,3 +44,20 @@ assigned_to INTEGER REFERENCES technicians(id),
 location TEXT DEFAULT '',
 last_service TEXT DEFAULT '',
 photo_url TEXT DEFAULT '');
+
+
+* Notes from claude to consider how to implement sending esrvice or maintenance notifications
+But what about stuff I'm missing. For example, the one feature my cousin keeps asking whether it is possible to implement, is some kind of reminder for when a car needs, for example, the general service done, or maintenance, or something like that. That would imply setting up something to send emails or text messages or whatsapp messages? That feature alone would be way more complex that maybe the entire CRUD itself, no? Should I start thinking about that now or should I leave it for later or even to the very last?
+
+Split this into two separate problems, because they have very different complexity — and conflating them is why it feels like it'd swallow the whole project.
+
+"Is this vehicle overdue for service" — cheap, do it whenever. You already have the data (records table has date/type, vehicle has last_service). Computing "flag any vehicle where last_service + N days < today" is a plain SQL query against your existing schema. No new infrastructure, no new abstractions — it's the same CRUD skillset you're already using.
+
+Actually delivering a notification — this is where the cost lives, and it's very channel-dependent:
+- Email — cheapest by far. net/smtp (or a free-tier transactional API) plus an app password is maybe an afternoon of work for 2-3 recipients. No approval process, no per-message cost at this volume.
+- SMS — needs a paid provider (Twilio etc.), per-message billing, and in some countries registration/approval for business messaging. Meaningfully more setup than email for the same outcome.
+- WhatsApp — the heaviest by a wide margin: WhatsApp Business API requires going through Meta or a reseller, business verification, and pre-approved message templates. For an internal tool with three users, that's real bureaucratic overhead disproportionate to what you get.
+
+Given your actual audience (cousin, manager, occasionally your dad), email alone probably satisfies "remind me when a car needs service" — nobody in that group needs it to specifically arrive as a text or a WhatsApp ping, they need to know. I'd push back gently on the request if it's phrased as "text or WhatsApp" — ask whether email actually solves it before building toward the expensive options.
+
+On sequencing: leave delivery to near the end — it's a genuinely separable module (a scheduled check + "send email" call) that bolts onto a finished CRUD without forcing you to rearchitect anything you've already built. The one thing worth keeping in the back of your mind now, cheaply, is making sure you're recording the data you'd need later — e.g. does a service record capture enough to compute "next due date" (a fixed interval like "every 6 months," or is that per-vehicle/per-service-type)? That's a five-minute schema thought today versus a migration later. Everything else — the actual reminder job, the email sending — is last, not first.

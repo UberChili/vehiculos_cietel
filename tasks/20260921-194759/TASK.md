@@ -1,6 +1,6 @@
 # create insert record form and template
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS:
 

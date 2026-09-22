@@ -54,6 +54,8 @@ func main() {
 	r.Get("/", app.IndexHandler)
 	r.Get("/vehiculos/{id}", app.VehicleHandler)
 	r.Post("/vehiculos/{id}", app.VehicleHandler)
+	r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
+	r.Post("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new", app.NewVehicleHandler)
 

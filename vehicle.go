@@ -22,6 +22,7 @@ var Models = []string{"spark", "chevy", "ikon", "atos", "courier", "tornado"}
 
 type Record struct {
 	ID          int
+	VehicleID   int
 	DateShort   string
 	Type        string
 	Description string

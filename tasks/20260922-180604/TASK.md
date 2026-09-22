@@ -1,6 +1,6 @@
 # Fix Vehicle Record handler to pretty-print values
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS:
 

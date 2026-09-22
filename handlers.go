@@ -64,6 +64,11 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// capitalize values for pretty printing
+		vehicle.Maker = CapitalizeFirst(vehicle.Maker)
+		vehicle.Model = CapitalizeFirst(vehicle.Model)
+		vehicle.Location = CapitalizeFirst(vehicle.Location)
+
 		// We first try executing the template and outputting to a buffer
 		// Don't remember why but this is safer than trying to send directly to the writer
 		var buf bytes.Buffer
@@ -75,11 +80,6 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// Everything loaded correctly, we can output the template to actual output
 		fmt.Fprintf(w, "%s", buf.Bytes())
-	}
-
-	if r.Method == http.MethodPost {
-		fmt.Println("POST method called on VehicleHandler with id",
-			chi.URLParam(r, "id"))
 	}
 }
 
@@ -150,6 +150,58 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// return to main page
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+}
+
+func (a App) RecordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		log.Println("GET called on RecordHandler")
+
+		vehicle, v_err := a.GetVehicle(chi.URLParam(r, "id"))
+		if v_err != nil {
+			log.Printf("Error getting vehicle with id: %s: %s\n", chi.URLParam(r, "id"), v_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "No se encontró el vehículo.")
+			return
+		}
+
+		record, err := a.GetRecord(chi.URLParam(r, "id"), chi.URLParam(r, "record_id"))
+		if err != nil {
+			log.Println("Error getting record:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Error al obtener reparación")
+			return
+		}
+
+		// GetVehicleRecordsByID already orders latest-first; just drop the one
+		// being viewed to build the "other records" list.
+		allRecords, err := a.GetVehicleRecordsByID(chi.URLParam(r, "id"))
+		if err != nil {
+			log.Println("Error when querying for records:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor", "Ocurrió un error al consultar los registros de vehículo.")
+			return
+		}
+
+		var otherRecords []Record
+		for _, other := range allRecords {
+			if other.ID != record.ID {
+				otherRecords = append(otherRecords, other)
+			}
+		}
+
+		data := struct {
+			Vehicle      Vehicle
+			Record       Record
+			OtherRecords []Record
+		}{Vehicle: vehicle, Record: record, OtherRecords: otherRecords}
+
+		// Render and print
+		var buf bytes.Buffer
+		err = a.tmpl.ExecuteTemplate(&buf, "record.html", data)
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		fmt.Fprintf(w, "%s", buf.Bytes())
 	}
 }
 

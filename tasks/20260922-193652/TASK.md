@@ -1,4 +1,4 @@
-# Fix Vehicle Record handler to pretty-print values
+# Implement Record Handler
 
 - STATUS: CLOSED
 - PRIORITY: 100

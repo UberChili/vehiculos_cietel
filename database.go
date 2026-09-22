@@ -103,7 +103,7 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 		return Vehicle{}, errors.New("Vehicle not found")
 	}
 
-	records_rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ?", id)
+	records_rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ? ORDER BY date DESC", id)
 	if err != nil {
 		v.Records = nil
 		return v, err
@@ -149,6 +149,43 @@ func (a *App) InsertNewVehicle(vehicle Vehicle) error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) GetRecord(vehicle_id, record_id string) (Record, error) {
+	query := "SELECT * FROM records WHERE id = ? AND vehicle_id = ?"
+	row := a.db.QueryRow(query, record_id, vehicle_id)
+
+	r := Record{}
+
+	err := row.Scan(&r.ID, &r.VehicleID, &r.DateShort, &r.Type, &r.Description, &r.Cost)
+
+	// Not neccessarily an error, but no results
+	if err == sql.ErrNoRows {
+		return Record{}, errors.New("Record not found")
+	}
+
+	return r, nil
+}
+
+func (a *App) GetVehicleRecordsByID(id string) ([]Record, error) {
+	rows, err := a.db.Query("SELECT id, vehicle_id, date, type, description, cost FROM records WHERE vehicle_id = ? ORDER BY date DESC, id DESC", id)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []Record
+	for rows.Next() {
+		var r Record
+		if err := rows.Scan(&r.ID, &r.VehicleID, &r.DateShort, &r.Type, &r.Description, &r.Cost); err != nil {
+			return records, err
+		}
+		records = append(records, r)
+	}
+	if err = rows.Err(); err != nil {
+		return records, err
+	}
+
+	return records, nil
 }
 
 func (a *App) InsertNewRecord(record Record) error {

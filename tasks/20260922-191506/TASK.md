@@ -1,6 +1,6 @@
 # Fix Vehicle Record handler to list records sorted as latest first
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS:
 

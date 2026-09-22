@@ -152,3 +152,58 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
+
+func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
+	// Called a GET method o
+	if r.Method == http.MethodGet {
+		log.Println("GET called on NewRecordHandler")
+
+		vehicle_id, conv_err := strconv.Atoi(chi.URLParam(r, "id"))
+		if conv_err != nil {
+			log.Println("Error with vehicle id:", conv_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Error con ID de vehículo. ID inválido.")
+			return
+		}
+
+		// Display form for new record
+		var buf bytes.Buffer
+		err := a.tmpl.ExecuteTemplate(&buf, "new_record.html", Record{VehicleID: vehicle_id})
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		fmt.Fprintf(w, "%s", buf.Bytes())
+	}
+
+	if r.Method == http.MethodPost {
+		log.Println("POST called on NewRecordHandler")
+
+		// process data to add new record
+		record_type := r.FormValue("type")
+		vehicle_id, conv_err := strconv.Atoi(chi.URLParam(r, "id"))
+		if conv_err != nil {
+			log.Println("Error with vehicle id:", conv_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Error con ID de vehículo. ID inválido.")
+			return
+		}
+
+		date := r.FormValue("date")
+		description := r.FormValue("description")
+		cost := r.FormValue("cost")
+
+		record := Record{VehicleID: vehicle_id, DateShort: date, Type: record_type, Description: description, Cost: cost}
+		log.Println(record)
+
+		insert_err := a.InsertNewRecord(record)
+		if insert_err != nil {
+			log.Println("Error inserting vehicle:", insert_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Error al insertar reparación: ")
+			return
+		}
+		// return to vehicle page
+		// r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
+		vehicle_page_url := fmt.Sprintf("/vehiculos/%s", chi.URLParam(r, "id"))
+		http.Redirect(w, r, vehicle_page_url, http.StatusSeeOther)
+	}
+}

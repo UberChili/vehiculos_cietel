@@ -1,7 +1,7 @@
 # fix showing last service on index
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 80
 - TAGS:
 
 No description.

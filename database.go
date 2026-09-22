@@ -150,3 +150,15 @@ func (a *App) InsertNewVehicle(vehicle Vehicle) error {
 	}
 	return nil
 }
+
+func (a *App) InsertNewRecord(record Record) error {
+	stmt := `INSERT INTO records (
+			vehicle_id, date, type, description, cost)
+			VALUES (?, ?, ?, ?, ?)`
+
+	_, err := a.db.Exec(stmt, record.VehicleID, record.DateShort, record.Type, record.Description, record.Cost)
+	if err != nil {
+		return err
+	}
+	return nil
+}

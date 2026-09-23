@@ -79,6 +79,10 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		v.Maker = CapitalizeFirst(v.Maker)
+		v.Model = CapitalizeFirst(v.Model)
+		v.Location = CapitalizeFirst(v.Location)
 		vehicles = append(vehicles, *v)
 	}
 	return vehicles, nil
@@ -198,4 +202,15 @@ func (a *App) InsertNewRecord(record Record) error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) DeleteRecord(vehicle_id, record_id string) (int64, error) {
+	stmt := `DELETE FROM records WHERE id = ? AND vehicle_id = ?`
+
+	result, err := a.db.Exec(stmt, record_id, vehicle_id)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
 }

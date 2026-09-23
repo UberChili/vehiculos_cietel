@@ -56,6 +56,7 @@ func main() {
 	r.Post("/vehiculos/{id}", app.VehicleHandler)
 	r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 	r.Get("/vehiculos/{id}/registro/{record_id}", app.RecordHandler)
+	r.Post("/vehiculos/{id}/registro/{record_id}/eliminar", app.RecordHandler)
 	r.Post("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new", app.NewVehicleHandler)

@@ -1,6 +1,6 @@
 # implementar eliminar registro
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS:
 

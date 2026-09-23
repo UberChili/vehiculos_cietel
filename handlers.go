@@ -41,6 +41,8 @@ func (a *App) IndexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO We need to get the last record
+
 	// Render template
 	var buf bytes.Buffer
 	err = a.tmpl.ExecuteTemplate(&buf, "index.html", vehicles)
@@ -203,10 +205,23 @@ func (a App) RecordHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "%s", buf.Bytes())
 	}
+
+	if r.Method == http.MethodPost {
+		log.Println("POST method called in RecordHandler")
+		result, err := a.DeleteRecord(chi.URLParam(r, "id"), chi.URLParam(r, "record_id"))
+		if err != nil {
+			log.Printf("Error deleting record %s of vehicle %s: %s\n", chi.URLParam(r, "record_id"), chi.URLParam(r, "id"), err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al intentar eliminar el registro.")
+			return
+		}
+		if result >= 1 {
+			vehicle_page_url := fmt.Sprintf("/vehiculos/%s", chi.URLParam(r, "id"))
+			http.Redirect(w, r, vehicle_page_url, http.StatusSeeOther)
+		}
+	}
 }
 
 func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
-	// Called a GET method o
 	if r.Method == http.MethodGet {
 		log.Println("GET called on NewRecordHandler")
 

@@ -217,13 +217,13 @@
 <body>
 
 <header>
-    <a href="/vehiculos/{{.Vehicle.ID}}/">‹</a>
+    <a href="/vehiculos/{{.Vehicle.ID}}">‹</a>
     <h1>{{.Record.Type}}</h1>
 </header>
 
 <div class="container">
 
-    <a href="/vehiculos/{{.Vehicle.ID}}/" class="vehicle-link">
+    <a href="/vehiculos/{{.Vehicle.ID}}" class="vehicle-link">
         {{if .Vehicle.PhotoURL}}
             <img src="{{.Vehicle.PhotoURL}}" alt="Foto del vehículo" class="vehicle-link-photo">
         {{else}}

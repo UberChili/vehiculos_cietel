@@ -253,6 +253,24 @@
             position: absolute;
             inset: 0;
         }
+
+        .search {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            margin: 0 0 1rem auto;
+            padding: 0.45rem 0.9rem;
+            border: 1px solid #ddd;
+            border-radius: 999px;
+            background: white;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .search:focus {
+            outline: none;
+            border-color: #e63946;
+        }
     </style>
 </head>
 <body>
@@ -268,10 +286,12 @@
         <a href="/vehiculos/new" class="btn">+ Agregar</a>
     </div>
 
+    <input type="search" id="search" class="search" placeholder="🔍 Buscar placas, marca, técnico...">
+
     <!-- Mobile: cards -->
     <div class="vehicle-list">
         {{range .}}
-        <a href="/vehiculos/{{.ID}}" class="vehicle-card">
+        <a href="/vehiculos/{{.ID}}" class="vehicle-card" data-search="{{.Plate}} {{.Maker}} {{.Model}} {{.AssignedToName}} {{.Location}}">
             <div class="vehicle-icon">🚙</div>
             <div class="vehicle-info">
                 <div class="vehicle-name">{{.Maker}} {{.Model}} {{.Year}}</div>
@@ -302,7 +322,7 @@
             </thead>
             <tbody>
                 {{range .}}
-                <tr>
+                <tr data-search="{{.Plate}} {{.Maker}} {{.Model}} {{.AssignedToName}} {{.Location}}">
                     <td class="plate-cell">
                         <a class="row-link" href="/vehiculos/{{.ID}}"></a>
                         {{.Plate}}
@@ -318,6 +338,19 @@
         </table>
     </div>
 </div>
+
+<script>
+    // Lowercases and strips accents, so "nunez" matches "Núñez".
+    const normalize = text => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+    // Hide every card/row whose data-search text doesn't contain the query.
+    document.getElementById("search").addEventListener("input", event => {
+        const query = normalize(event.target.value.trim());
+        document.querySelectorAll("[data-search]").forEach(item => {
+            item.style.display = normalize(item.dataset.search).includes(query) ? "" : "none";
+        });
+    });
+</script>
 
 </body>
 </html>

@@ -1,7 +1,7 @@
 # Implement a search for vehicles on index page
 
-- STATUS: OPEN
+- STATUS: Closed
 - PRIORITY: 30
 - TAGS:
 
-No description.
+Now we can search on Plates, maker, model, location and even assigned technician on index page

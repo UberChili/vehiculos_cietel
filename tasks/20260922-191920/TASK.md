@@ -1,6 +1,6 @@
 # Implement a search for vehicles on index page
 
-- STATUS: Closed
+- STATUS: CLOSED
 - PRIORITY: 30
 - TAGS:
 

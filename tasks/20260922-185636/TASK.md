@@ -1,7 +1,7 @@
 # Implement Support for the Photo of a vehicle
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 30
 - TAGS:
 
-No description.
+We can now add photos for vehicles from PC or mobile via upload or by taking a picture

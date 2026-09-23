@@ -97,7 +97,8 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 				COALESCE((SELECT MAX(date) FROM records
 						WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service,
 				COALESCE((SELECT MAX(date) FROM records
-						WHERE vehicle_id = v.id AND type = 'Reparación'), '') AS last_repair
+						WHERE vehicle_id = v.id AND type = 'Reparación'), '') AS last_repair,
+				v.photo_url
 				FROM vehicles v
 				LEFT JOIN technicians t ON v.assigned_to = t.id
 				WHERE v.id = ?`
@@ -106,7 +107,7 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 	v := Vehicle{}
 
 	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName,
-		&v.Location, &v.LastService, &v.LastRepair)
+		&v.Location, &v.LastService, &v.LastRepair, &v.PhotoURL)
 
 	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
@@ -139,6 +140,23 @@ func (a *App) InsertNewVehicle(vehicle Vehicle) error {
 
 	_, err := a.db.Exec(stmt, vehicle.Plate, vehicle.Maker,
 		vehicle.Model, vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.PhotoURL)
+	if err != nil {
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			return errors.New("El Técnico seleccionado ya tiene un vehículo asignado")
+		}
+		return err
+	}
+	return nil
+}
+
+// UpdateVehicle overwrites a vehicle's editable fields, including photo_url.
+func (a *App) UpdateVehicle(vehicle Vehicle) error {
+	stmt := `UPDATE vehicles SET plate = ?, maker = ?, model = ?, year = ?,
+			assigned_to = ?, location = ?, photo_url = ? WHERE id = ?`
+
+	_, err := a.db.Exec(stmt, vehicle.Plate, vehicle.Maker, vehicle.Model,
+		vehicle.Year, vehicle.AssignedTo, vehicle.Location, vehicle.PhotoURL, vehicle.ID)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {

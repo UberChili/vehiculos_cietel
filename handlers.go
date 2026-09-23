@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -112,7 +113,13 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		year := r.FormValue("year")
 		assigned_to := r.FormValue("assigned_to")
 		location := strings.ToLower(r.FormValue("location"))
-		photo := r.FormValue("photo")
+		photo, photo_err := SavePhoto(r)
+		if photo_err != nil {
+			log.Println("Error saving photo: ", photo_err)
+			message := fmt.Sprintf("Error al guardar la foto: %s", photo_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
 
 		vehicle := Vehicle{}
 		// assigned_to_int := 0
@@ -151,6 +158,116 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// return to main page
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+}
+
+func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if r.Method == http.MethodGet {
+		vehicle, v_err := a.GetVehicle(id)
+		if v_err != nil {
+			log.Printf("Error getting vehicle with id: %s: %s\n", id, v_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "No se encontró el vehículo.")
+			return
+		}
+
+		technicians, err := a.findAllTechnicians()
+		if err != nil {
+			log.Println("Error getting technicians:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+
+		// edit_vehicle.html reads the vehicle fields and .Technicians at the same level
+		data := struct {
+			Vehicle
+			Technicians []Technician
+		}{vehicle, technicians}
+
+		var buf bytes.Buffer
+		err = a.tmpl.ExecuteTemplate(&buf, "edit_vehicle.html", data)
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		fmt.Fprintf(w, "%s", buf.Bytes())
+	}
+
+	if r.Method == http.MethodPost {
+		vehicle_id, conv_err := strconv.Atoi(id)
+		if conv_err != nil {
+			log.Println("Error converting vehicle id:", conv_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "ID de vehículo inválido.")
+			return
+		}
+
+		vehicle := Vehicle{
+			ID:       vehicle_id,
+			Plate:    strings.ToUpper(r.FormValue("plate")),
+			Maker:    strings.ToLower(r.FormValue("maker")),
+			Model:    strings.ToLower(r.FormValue("model")),
+			Year:     r.FormValue("year"),
+			Location: strings.ToLower(r.FormValue("location")),
+		}
+
+		// Empty means "Sin asignar", so AssignedTo stays nil
+		if assigned_to := r.FormValue("assigned_to"); assigned_to != "" {
+			assigned_to_int, conv_err := strconv.Atoi(assigned_to)
+			if conv_err != nil {
+				log.Println("Error in Form values. Invalid technician id conversion: ", conv_err)
+				a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "ID de técnico inválido.")
+				return
+			}
+			vehicle.AssignedTo = &assigned_to_int
+		}
+
+		vehicle_validation_err := ValidateVehicleFields(vehicle)
+		if vehicle_validation_err != nil {
+			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)
+			message := fmt.Sprintf("Valores de vehículo inválidos: %s\n", vehicle_validation_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+
+		// Photo: keep the current one, unless it's deleted or a new one is uploaded
+		old_vehicle, v_err := a.GetVehicle(id)
+		if v_err != nil {
+			log.Printf("Error getting vehicle with id: %s: %s\n", id, v_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "No se encontró el vehículo.")
+			return
+		}
+		vehicle.PhotoURL = old_vehicle.PhotoURL
+		if r.FormValue("delete_photo") != "" {
+			vehicle.PhotoURL = ""
+		}
+		new_photo, photo_err := SavePhoto(r)
+		if photo_err != nil {
+			log.Println("Error saving photo: ", photo_err)
+			message := fmt.Sprintf("Error al guardar la foto: %s", photo_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+		if new_photo != "" {
+			vehicle.PhotoURL = new_photo
+		}
+
+		update_err := a.UpdateVehicle(vehicle)
+		if update_err != nil {
+			log.Println("Error updating vehicle: ", update_err)
+			message := fmt.Sprintf("Error al editar vehículo: %s", update_err)
+			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+
+		// The old photo was replaced or deleted, so remove its file from uploads/
+		if old_vehicle.PhotoURL != "" && old_vehicle.PhotoURL != vehicle.PhotoURL {
+			os.Remove(strings.TrimPrefix(old_vehicle.PhotoURL, "/"))
+		}
+
+		// back to the vehicle's page
+		http.Redirect(w, r, "/vehiculos/"+id, http.StatusSeeOther)
 	}
 }
 

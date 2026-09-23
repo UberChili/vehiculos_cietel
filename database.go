@@ -58,7 +58,9 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 func (a App) findAllVehicles() ([]Vehicle, error) {
 	// query := `SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles ORDER BY LOCATION`
 	query := `SELECT v.id, v.plate, v.maker, v.model, v.year, v.assigned_to,
-			COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS assigned_to_name, v.location
+			COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS assigned_to_name, v.location,
+			COALESCE((SELECT MAX(date) FROM records
+					WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service
 			FROM vehicles v
 			LEFT JOIN technicians t ON v.assigned_to = t.id
 			ORDER BY v.location`
@@ -74,7 +76,7 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 	for rows.Next() {
 		v := &Vehicle{}
 		err := rows.Scan(
-			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName, &v.Location)
+			&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName, &v.Location, &v.LastService)
 
 		if err != nil {
 			return nil, err
@@ -91,7 +93,11 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 func (a App) GetVehicle(id string) (Vehicle, error) {
 	// row := a.db.QueryRow("SELECT id, plate, maker, model, year, assigned_to, location FROM vehicles WHERE id = ?", id)
 	query := `SELECT v.id, v.plate, v.maker, v.model, v.year, v.assigned_to,
-				COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS asigned_to_name, location
+				COALESCE(t.first_name || ' ' || t.last_name, 'Sin asignar') AS asigned_to_name, location,
+				COALESCE((SELECT MAX(date) FROM records
+						WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service,
+				COALESCE((SELECT MAX(date) FROM records
+						WHERE vehicle_id = v.id AND type = 'Reparación'), '') AS last_repair
 				FROM vehicles v
 				LEFT JOIN technicians t ON v.assigned_to = t.id
 				WHERE v.id = ?`
@@ -100,7 +106,7 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 	v := Vehicle{}
 
 	err := row.Scan(&v.ID, &v.Plate, &v.Maker, &v.Model, &v.Year, &v.AssignedTo, &v.AssignedToName,
-		&v.Location)
+		&v.Location, &v.LastService, &v.LastRepair)
 
 	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
@@ -124,18 +130,6 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 	}
 
 	return v, nil
-}
-
-func (a App) GetLastServiceOrRepair(vehicle Vehicle) Record {
-	row := a.db.QueryRow("SELECT * FROM records WHERE id = ? ORDER BY DATE", vehicle.ID)
-
-	var r Record
-	err := row.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost)
-	if err == sql.ErrNoRows {
-		log.Printf("No records found for vehicle_id %d: %s .\n", vehicle.ID, err)
-		return Record{}
-	}
-	return r
 }
 
 func (a *App) InsertNewVehicle(vehicle Vehicle) error {

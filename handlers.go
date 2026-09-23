@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -40,8 +41,6 @@ func (a *App) IndexHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error getting vehicles:", err)
 		return
 	}
-
-	// TODO We need to get the last record
 
 	// Render template
 	var buf bytes.Buffer
@@ -255,11 +254,16 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		date := r.FormValue("date")
+		date, parse_err := time.Parse("02-01-2006", r.FormValue("date"))
+		if parse_err != nil {
+			log.Println("Error parsing date:", parse_err)
+			a.RenderError(w, http.StatusBadRequest, "Fecha inválida.", "Usa el formato dd-mm-aaaa.")
+			return
+		}
 		description := r.FormValue("description")
 		cost := r.FormValue("cost")
 
-		record := Record{VehicleID: vehicle_id, DateShort: date, Type: record_type, Description: description, Cost: cost}
+		record := Record{VehicleID: vehicle_id, DateShort: date.Format("2006-01-02"), Type: record_type, Description: description, Cost: cost}
 		log.Println(record)
 
 		insert_err := a.InsertNewRecord(record)

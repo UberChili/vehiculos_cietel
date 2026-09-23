@@ -1,6 +1,6 @@
 # Review something pendant related to dates
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 30
 - TAGS:
 

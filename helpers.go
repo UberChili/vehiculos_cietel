@@ -2,11 +2,62 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
 	"unicode"
 )
+
+// SavePhoto stores the "photo" file from a multipart form in uploads/ and
+// returns its URL (e.g. /uploads/1788294772393192185.jpg). The photo is
+// optional, so when none was submitted it returns "" and no error.
+func SavePhoto(r *http.Request) (string, error) {
+	file, header, err := r.FormFile("photo")
+	if err == http.ErrMissingFile {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	if header.Size > 20<<20 {
+		return "", errors.New("La foto pesa más de 20MB.")
+	}
+
+	// Look at the file's actual bytes (not its name) to make sure it's an
+	// image a browser can display, and pick the extension from that.
+	head := make([]byte, 512)
+	n, _ := file.Read(head)
+	extensions := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+	ext, ok := extensions[http.DetectContentType(head[:n])]
+	if !ok {
+		return "", errors.New("El archivo no es una imagen válida (JPG, PNG, WEBP o GIF).")
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll("uploads", 0755); err != nil {
+		return "", err
+	}
+	name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	dst, err := os.Create(filepath.Join("uploads", name))
+	if err != nil {
+		return "", err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		return "", err
+	}
+	return "/uploads/" + name, nil
+}
 
 // FormatDateDisplay converts a date stored as ISO 8601 (YYYY-MM-DD) into
 // dd-mm-yyyy, the format shown to users everywhere in the UI. Dates stay
@@ -20,6 +71,13 @@ func FormatDateDisplay(iso string) string {
 		return iso
 	}
 	return t.Format("02-01-2006")
+}
+
+// IsAssignedTo reports whether a vehicle's AssignedTo points to the given
+// technician ID. Templates can't compare a *int with an int using eq, so
+// this does the nil check and dereference for them.
+func IsAssignedTo(assignedTo *int, technicianID int) bool {
+	return assignedTo != nil && *assignedTo == technicianID
 }
 
 // helper function to capitalize strings

@@ -255,11 +255,12 @@
 
             <div class="field">
                 <label>Asignado a</label>
-                {{/* Expects .Technicians: []Technician{FirstName, LastName} alongside the existing Vehicle fields */}}
+                {{/* Expects .Technicians: []Technician{ID, FirstName, LastName} alongside the existing Vehicle fields.
+                     Option value is the technician's ID, same as new_vehicle.html. */}}
                 <select name="assigned_to">
                     <option value="" {{if not .AssignedTo}}selected{{end}}>Sin asignar</option>
                     {{range .Technicians}}
-                    <option value="{{.FirstName}} {{.LastName}}" {{if eq $.AssignedTo (printf "%s %s" .FirstName .LastName)}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>
+                    <option value="{{.ID}}" {{if isAssignedTo $.AssignedTo .ID}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>
                     {{end}}
                 </select>
             </div>
@@ -283,7 +284,7 @@
                 {{end}}
 
                 <div class="photo-upload" id="photoUpload">
-                    <input type="file" name="photo" accept="image/*" capture="environment" id="photoInput">
+                    <input type="file" name="photo" accept="image/*" id="photoInput">
                     <div class="photo-upload-icon">📷</div>
                     <div class="photo-upload-text">
                         <strong>Toca para tomar foto</strong> o seleccionar {{if .PhotoURL}}otra{{else}}una{{end}} imagen

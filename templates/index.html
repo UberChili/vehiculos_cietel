@@ -166,6 +166,11 @@
             color: #721c24;
         }
 
+        .status-none {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
         .chevron {
             color: #ccc;
             font-size: 1.2rem;
@@ -283,7 +288,7 @@
             gap: 0.75rem;
         }
 
-        .technician-list a {
+        .technician-list a.meta-item {
             color: inherit;
         }
     </style>
@@ -321,6 +326,7 @@
                     <span class="meta-item">🔧 Último servicio: <strong>{{formatDate .LastService}}</strong></span>
                 </div>
             </div>
+            {{template "statusBadge" .LastService}}
             <span class="chevron">›</span>
         </a>
         {{end}}
@@ -335,6 +341,7 @@
                     <th>Vehículo</th>
                     <th>Año</th>
                     <th>Último servicio</th>
+                    <th>Estado</th>
                     <th>Asignado a</th>
                     <th>Ubicación</th>
                 </tr>
@@ -349,6 +356,7 @@
                     <td>{{.Maker}} {{.Model}}</td>
                     <td>{{.Year}}</td>
                     <td>{{formatDate .LastService}}</td>
+                    <td>{{template "statusBadge" .LastService}}</td>
                     <td>{{.AssignedToName}}</td>
                     <td>{{.Location}}</td>
                 </tr>
@@ -383,6 +391,7 @@
                     {{if not $assigned}}<span class="meta-item">Sin vehículo asignado</span>{{end}}
                 </div>
             </div>
+            <a href="/tecnicos/{{.ID}}/editar" class="btn btn-secondary">Editar</a>
         </div>
         {{else}}
         <p class="meta-item">Sin técnicos aún.</p>
@@ -415,3 +424,15 @@
 
 </body>
 </html>
+
+{{/* Service status badge for a vehicle, from its last service date.
+     serviceStatus (ServiceStatus in helpers.go) picks the color class. */}}
+{{define "statusBadge"}}
+{{- $status := serviceStatus . -}}
+<span class="status-badge status-{{$status}}">
+    {{- if eq $status "ok"}}Al día
+    {{- else if eq $status "warning"}}Próximo
+    {{- else if eq $status "overdue"}}Vencido
+    {{- else}}Sin servicio{{end -}}
+</span>
+{{- end}}

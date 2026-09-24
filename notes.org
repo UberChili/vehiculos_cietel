@@ -31,8 +31,9 @@ CREATE TABLE records (
 				date TEXT NOT NULL,
 				type TEXT NOT NULL,
 				description TEXT NOT NULL,
-				cost TEXT DEFAULT ''
+				cost INTEGER
 				);
+CREATE UNIQUE INDEX vehicles_plate_unique ON vehicles (replace(replace(plate, '-', ''), ' ', ''));
 CREATE TABLE technicians (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL);
 CREATE TABLE vehicles (
 id INTEGER PRIMARY KEY AUTOINCREMENT,

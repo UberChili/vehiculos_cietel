@@ -138,6 +138,21 @@
             border-top: 1px solid #f0f0f0;
         }
 
+        .btn-edit {
+            display: block;
+            width: 100%;
+            padding: 0.7rem;
+            margin-bottom: 0.6rem;
+            background: #e63946;
+            color: white;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            letter-spacing: 0.02em;
+        }
+
         .btn-delete {
             width: 100%;
             padding: 0.7rem;
@@ -244,11 +259,12 @@
         {{if .Record.Cost}}
         <div class="record-section">
             <label>Costo</label>
-            <p class="record-cost">💰 ${{.Record.Cost}}</p>
+            <p class="record-cost">💰 ${{formatCost .Record.Cost}}</p>
         </div>
         {{end}}
 
         <div class="record-actions">
+            <a href="/vehiculos/{{.Vehicle.ID}}/registro/{{.Record.ID}}/editar" class="btn-edit">Editar registro</a>
             <form method="POST" action="/vehiculos/{{.Vehicle.ID}}/registro/{{.Record.ID}}/eliminar"
                   onsubmit="return confirm('¿Seguro que deseas eliminar este registro? Esta acción no se puede deshacer.');">
                 <button type="submit" class="btn-delete">Eliminar registro</button>

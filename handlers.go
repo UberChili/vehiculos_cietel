@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -83,7 +82,6 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 		// capitalize values for pretty printing
 		vehicle.Maker = CapitalizeFirst(vehicle.Maker)
 		vehicle.Model = CapitalizeFirst(vehicle.Model)
-		vehicle.Location = CapitalizeFirst(vehicle.Location)
 		if vehicle.AssignedTo != nil { // otherwise it's "Sin asignar"
 			vehicle.AssignedToName = CapitalizeWords(vehicle.AssignedToName)
 		}
@@ -116,7 +114,8 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		data := struct {
 			Technicians   []Technician
 			ModelsByMaker map[string][]string
-		}{technicians, ModelsByMaker}
+			CitiesByState map[string][]string
+		}{technicians, ModelsByMaker, CitiesByState}
 
 		err = a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", data)
 		if err != nil {
@@ -129,12 +128,13 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		plate := strings.ToUpper(r.FormValue("plate"))
+		plate := strings.ToUpper(strings.TrimSpace(r.FormValue("plate")))
 		maker := strings.ToLower(r.FormValue("maker"))
 		model := strings.ToLower(r.FormValue("model"))
 		year := r.FormValue("year")
 		assigned_to := r.FormValue("assigned_to")
-		location := strings.ToLower(r.FormValue("location"))
+		// Comes from the CitiesByState dropdown, already written as it should be stored
+		location := r.FormValue("location")
 		photo, photo_err := SavePhoto(r)
 		if photo_err != nil {
 			log.Println("Error saving photo: ", photo_err)
@@ -201,12 +201,13 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// edit_vehicle.html reads the vehicle fields, .Technicians and .ModelsByMaker at the same level
+		// edit_vehicle.html reads the vehicle fields, .Technicians, .ModelsByMaker and .CitiesByState at the same level
 		data := struct {
 			Vehicle
 			Technicians   []Technician
 			ModelsByMaker map[string][]string
-		}{vehicle, technicians, ModelsByMaker}
+			CitiesByState map[string][]string
+		}{vehicle, technicians, ModelsByMaker, CitiesByState}
 
 		var buf bytes.Buffer
 		err = a.tmpl.ExecuteTemplate(&buf, "edit_vehicle.html", data)
@@ -228,11 +229,11 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 
 		vehicle := Vehicle{
 			ID:       vehicle_id,
-			Plate:    strings.ToUpper(r.FormValue("plate")),
+			Plate:    strings.ToUpper(strings.TrimSpace(r.FormValue("plate"))),
 			Maker:    strings.ToLower(r.FormValue("maker")),
 			Model:    strings.ToLower(r.FormValue("model")),
 			Year:     r.FormValue("year"),
-			Location: strings.ToLower(r.FormValue("location")),
+			Location: r.FormValue("location"), // from the CitiesByState dropdown
 		}
 
 		// Empty means "Sin asignar", so AssignedTo stays nil
@@ -414,7 +415,6 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("POST called on NewRecordHandler")
 
 		// process data to add new record
-		record_type := r.FormValue("type")
 		vehicle_id, conv_err := strconv.Atoi(chi.URLParam(r, "id"))
 		if conv_err != nil {
 			log.Println("Error with vehicle id:", conv_err)
@@ -422,26 +422,12 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		date, parse_err := time.Parse("02-01-2006", r.FormValue("date"))
-		if parse_err != nil {
-			log.Println("Error parsing date:", parse_err)
-			a.RenderError(w, http.StatusBadRequest, "Fecha inválida.", "Usa el formato dd-mm-aaaa.")
+		record, form_err := ParseRecordForm(r)
+		if form_err != nil {
+			a.RenderError(w, http.StatusBadRequest, "Datos inválidos.", form_err.Error())
 			return
 		}
-		description := r.FormValue("description")
-		cost := r.FormValue("cost")
-
-		// Last service/repair are looked up by these exact type names
-		if record_type != "Servicio" && record_type != "Reparación" {
-			a.RenderError(w, http.StatusBadRequest, "Tipo inválido.", "El tipo debe ser Servicio o Reparación.")
-			return
-		}
-		if strings.TrimSpace(description) == "" {
-			a.RenderError(w, http.StatusBadRequest, "Descripción vacía.", "La descripción es obligatoria.")
-			return
-		}
-
-		record := Record{VehicleID: vehicle_id, DateShort: date.Format("2006-01-02"), Type: record_type, Description: description, Cost: cost}
+		record.VehicleID = vehicle_id
 		log.Println(record)
 
 		insert_err := a.InsertNewRecord(record)
@@ -474,11 +460,9 @@ func (a *App) NewTechnicianHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		log.Println("POST called on NewTechnicianHandler")
 
-		// Extra spaces removed and lowercased so " Juan" and "juan" don't end up as two
-		// different spellings. Capitalized again when read from the database for display.
 		technician := Technician{
-			FirstName: strings.ToLower(strings.Join(strings.Fields(r.FormValue("first_name")), " ")),
-			LastName:  strings.ToLower(strings.Join(strings.Fields(r.FormValue("last_name")), " ")),
+			FirstName: NormalizeName(r.FormValue("first_name")),
+			LastName:  NormalizeName(r.FormValue("last_name")),
 		}
 		if technician.FirstName == "" || technician.LastName == "" {
 			a.RenderError(w, http.StatusBadRequest, "Datos inválidos.", "El nombre y el apellido son obligatorios.")
@@ -494,4 +478,102 @@ func (a *App) NewTechnicianHandler(w http.ResponseWriter, r *http.Request) {
 		// back to the technicians view of the index page
 		http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)
 	}
+}
+
+func (a App) EditRecordHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	record_id := chi.URLParam(r, "record_id")
+
+	record, err := a.GetRecord(id, record_id)
+	if err != nil {
+		log.Println("Error getting record:", err)
+		a.RenderError(w, http.StatusNotFound, "Registro no encontrado.", "No se encontró el registro.")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		var buf bytes.Buffer
+		err = a.tmpl.ExecuteTemplate(&buf, "edit_record.html", record)
+		if err != nil {
+			log.Println("Error loading template:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		fmt.Fprintf(w, "%s", buf.Bytes())
+	}
+
+	if r.Method == http.MethodPost {
+		edited, form_err := ParseRecordForm(r)
+		if form_err != nil {
+			a.RenderError(w, http.StatusBadRequest, "Datos inválidos.", form_err.Error())
+			return
+		}
+		edited.ID = record.ID
+		edited.VehicleID = record.VehicleID
+
+		update_err := a.UpdateRecord(edited)
+		if update_err != nil {
+			log.Println("Error updating record:", update_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Error al editar el registro.")
+			return
+		}
+		// back to the record's page
+		http.Redirect(w, r, fmt.Sprintf("/vehiculos/%s/registro/%s", id, record_id), http.StatusSeeOther)
+	}
+}
+
+func (a *App) EditTechnicianHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	technician, err := a.GetTechnician(id)
+	if err != nil {
+		log.Printf("Error getting technician with id: %s: %s\n", id, err)
+		a.RenderError(w, http.StatusNotFound, "Técnico no encontrado.", "No se encontró el técnico.")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		var buf bytes.Buffer
+		if err := a.tmpl.ExecuteTemplate(&buf, "edit_technician.html", technician); err != nil {
+			log.Println("Error rendering edit_technician.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		buf.WriteTo(w)
+	}
+
+	if r.Method == http.MethodPost {
+		technician.FirstName = NormalizeName(r.FormValue("first_name"))
+		technician.LastName = NormalizeName(r.FormValue("last_name"))
+		if technician.FirstName == "" || technician.LastName == "" {
+			a.RenderError(w, http.StatusBadRequest, "Datos inválidos.", "El nombre y el apellido son obligatorios.")
+			return
+		}
+
+		update_err := a.UpdateTechnician(technician)
+		if update_err != nil {
+			log.Println("Error updating technician:", update_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Error al editar técnico.")
+			return
+		}
+		http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)
+	}
+}
+
+func (a *App) DeleteTechnicianHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if _, err := a.GetTechnician(id); err != nil {
+		log.Printf("Error getting technician with id: %s: %s\n", id, err)
+		a.RenderError(w, http.StatusNotFound, "Técnico no encontrado.", "No se encontró el técnico.")
+		return
+	}
+
+	// Their vehicle, if any, is left "Sin asignar" (see DeleteTechnician)
+	if err := a.DeleteTechnician(id); err != nil {
+		log.Printf("Error deleting technician %s: %s\n", id, err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al intentar eliminar el técnico.")
+		return
+	}
+	http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -58,6 +59,78 @@ func SavePhoto(r *http.Request) (string, error) {
 		return "", err
 	}
 	return "/uploads/" + name, nil
+}
+
+// ServiceIntervalDays is how often a vehicle needs a service.
+// PLACEHOLDER: the real interval is still to be decided. It's only here so the
+// status badges on the index page have something to work with.
+const ServiceIntervalDays = 90
+
+// ServiceDueSoonDays is how many days before its due date a vehicle shows as "Próximo"
+const ServiceDueSoonDays = 15
+
+// ServiceStatus tells how a vehicle is doing on services, from its last service
+// date (ISO, as stored): "ok", "warning" (due soon), "overdue" or "none" (never
+// serviced). The values match the status-* CSS classes of the badges in index.html.
+func ServiceStatus(lastService string) string {
+	last, err := time.Parse("2006-01-02", lastService)
+	if err != nil {
+		return "none"
+	}
+	due := last.AddDate(0, 0, ServiceIntervalDays)
+	switch {
+	case time.Now().After(due):
+		return "overdue"
+	case time.Now().After(due.AddDate(0, 0, -ServiceDueSoonDays)):
+		return "warning"
+	default:
+		return "ok"
+	}
+}
+
+// FormatCost shows a cost stored in cents as pesos, e.g. 185050 -> "1850.50"
+func FormatCost(cents *int64) string {
+	if cents == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d.%02d", *cents/100, *cents%100)
+}
+
+// ParseRecordForm reads and validates the fields shared by the new and edit
+// record forms. VehicleID and ID are left for the caller to set.
+func ParseRecordForm(r *http.Request) (Record, error) {
+	record := Record{Type: r.FormValue("type"), Description: strings.TrimSpace(r.FormValue("description"))}
+
+	// Last service/repair are looked up by these exact type names
+	if record.Type != "Servicio" && record.Type != "Reparación" {
+		return Record{}, errors.New("El tipo debe ser Servicio o Reparación.")
+	}
+	date, err := time.Parse("02-01-2006", r.FormValue("date"))
+	if err != nil {
+		return Record{}, errors.New("Fecha inválida. Usa el formato dd-mm-aaaa.")
+	}
+	record.DateShort = date.Format("2006-01-02")
+	if record.Description == "" {
+		return Record{}, errors.New("La descripción es obligatoria.")
+	}
+
+	// Cost is optional. Stored in cents so money never has float rounding errors
+	if cost := strings.TrimSpace(r.FormValue("cost")); cost != "" {
+		pesos, err := strconv.ParseFloat(cost, 64)
+		// written this way so it also rejects NaN and Inf, which ParseFloat accepts
+		if err != nil || !(pesos >= 0 && pesos < 1_000_000_000) {
+			return Record{}, errors.New("Costo inválido.")
+		}
+		cents := int64(math.Round(pesos * 100))
+		record.Cost = &cents
+	}
+	return record, nil
+}
+
+// NormalizeName lowercases a name and removes extra spaces, so " Juan" and "juan"
+// don't end up as two different spellings. It's capitalized again for display.
+func NormalizeName(name string) string {
+	return strings.ToLower(strings.Join(strings.Fields(name), " "))
 }
 
 // FormatDateDisplay converts a date stored as ISO 8601 (YYYY-MM-DD) into
@@ -118,6 +191,13 @@ func ValidateVehicleFields(vehicle Vehicle) error {
 	// Next year's models are already sold, so allow up to current year + 1
 	if year > time.Now().Year()+1 || year <= 2009 {
 		return errors.New("Invalid Year.")
+	}
+	// Location is optional, but when set it must be "City, State" from CitiesByState
+	if vehicle.Location != "" {
+		city, state, _ := strings.Cut(vehicle.Location, ", ")
+		if !slices.Contains(CitiesByState[state], city) {
+			return errors.New("Ubicación inválida. No en la lista de ubicaciones.")
+		}
 	}
 
 	return nil

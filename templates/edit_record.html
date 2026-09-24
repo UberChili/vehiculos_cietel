@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar registro — Flotilla CIETEL</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        header a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.3rem;
+            opacity: 0.7;
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .field {
+            margin-bottom: 1.1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            margin-bottom: 0.35rem;
+        }
+
+        .required-star {
+            color: #e63946;
+            margin-left: 2px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 7px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: #1a1a1a;
+            background: #fafafa;
+            transition: border-color 0.15s;
+            -webkit-appearance: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #e63946;
+            background: white;
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: #bbb;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .required-note {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 1.25rem;
+        }
+
+        .required-note span {
+            color: #e63946;
+        }
+
+        .field-hint {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 0.35rem;
+        }
+
+        .tip-box {
+            display: none;
+            align-items: flex-start;
+            gap: 0.5rem;
+            background: #fff8e1;
+            border-left: 3px solid #f0ad4e;
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            margin-bottom: 0.6rem;
+            font-size: 0.8rem;
+            color: #8a6d3b;
+            line-height: 1.4;
+        }
+
+        .tip-box.visible {
+            display: flex;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.85rem;
+            background: #e63946;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-submit:active {
+            opacity: 0.85;
+        }
+
+        .btn-cancel {
+            display: block;
+            text-align: center;
+            margin-top: 0.85rem;
+            color: #999;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/vehiculos/{{.VehicleID}}/registro/{{.ID}}">‹</a>
+    <h1>Editar registro</h1>
+</header>
+
+<div class="container">
+    <div class="card">
+        {{/* Same form as new_record.html, filled with the record's current values */}}
+        <form action="/vehiculos/{{.VehicleID}}/registro/{{.ID}}/editar" method="POST">
+
+            <p class="required-note"><span>*</span> Campo obligatorio</p>
+
+            <div class="field-row">
+                <div class="field">
+                    <label>Tipo <span class="required-star">*</span></label>
+                    <select name="type" id="typeSelect" required>
+                        <option value="Servicio" {{if eq .Type "Servicio"}}selected{{end}}>Servicio</option>
+                        <option value="Reparación" {{if eq .Type "Reparación"}}selected{{end}}>Reparación</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Fecha <span class="required-star">*</span></label>
+                    <input type="text" name="date" id="dateInput" value="{{formatDate .DateShort}}" placeholder="dd-mm-aaaa"
+                           pattern="\d{2}-\d{2}-\d{4}" title="Formato: dd-mm-aaaa" inputmode="numeric"
+                           maxlength="10" autocomplete="off" required>
+                    <p class="field-hint">Formato: dd-mm-aaaa (ejemplo: 02-09-2026)</p>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Descripción <span class="required-star">*</span></label>
+                <p id="repairTip" class="tip-box{{if eq .Type "Reparación"}} visible{{end}}">💡 Recuerda agregar notas que consideres importantes. ¿Fue con otro mecánico? ¿Algo fuera de lo común?</p>
+                <textarea name="description" placeholder="Cambio de aceite y filtros" required>{{.Description}}</textarea>
+            </div>
+
+            <div class="field">
+                <label>Costo</label>
+                <input type="number" name="cost" value="{{formatCost .Cost}}" placeholder="0.00" min="0" step="0.01">
+            </div>
+
+            <button type="submit" class="btn-submit">Guardar cambios</button>
+            <a href="/vehiculos/{{.VehicleID}}/registro/{{.ID}}" class="btn-cancel">Cancelar</a>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('typeSelect').addEventListener('change', function(e) {
+        document.getElementById('repairTip').classList.toggle('visible', e.target.value === 'Reparación');
+    });
+
+    // Auto-inserts the dashes as digits are typed (02092026 -> 02-09-2026),
+    // since this is a plain text field rather than a native date picker.
+    document.getElementById('dateInput').addEventListener('input', function(e) {
+        var digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+        var parts = [];
+        if (digits.length > 0) parts.push(digits.slice(0, 2));
+        if (digits.length > 2) parts.push(digits.slice(2, 4));
+        if (digits.length > 4) parts.push(digits.slice(4, 8));
+        e.target.value = parts.join('-');
+    });
+</script>
+
+</body>
+</html>

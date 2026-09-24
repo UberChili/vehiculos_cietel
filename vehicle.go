@@ -24,11 +24,19 @@ var ModelsByMaker = map[string][]string{
 	"ford":      {"courier", "ikon"},
 }
 
+// Every city we work in, grouped by state abbreviation. A vehicle's location
+// is stored as "City, State", e.g. "Morelia, Mich.".
+var CitiesByState = map[string][]string{
+	"Mich.": {"Morelia", "Tangancícuaro", "Pátzcuaro", "La Piedad", "Sahuayo"},
+	"Jal.":  {"Puerto Vallarta"},
+	"Gto.":  {"San José Iturbide"},
+}
+
 type Record struct {
 	ID          int
 	VehicleID   int
 	DateShort   string
 	Type        string
 	Description string
-	Cost        string
+	Cost        *int64 // in cents, so $1850.50 is 185050. nil when no cost was entered
 }

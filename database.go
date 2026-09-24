@@ -85,6 +85,9 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 		v.Maker = CapitalizeFirst(v.Maker)
 		v.Model = CapitalizeFirst(v.Model)
 		v.Location = CapitalizeFirst(v.Location)
+		if v.AssignedTo != nil { // otherwise it's "Sin asignar"
+			v.AssignedToName = CapitalizeWords(v.AssignedToName)
+		}
 		vehicles = append(vehicles, *v)
 	}
 	return vehicles, nil
@@ -112,6 +115,9 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
 		return Vehicle{}, errors.New("Vehicle not found")
+	}
+	if err != nil {
+		return Vehicle{}, err
 	}
 
 	records_rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ? ORDER BY date DESC", id)
@@ -167,6 +173,12 @@ func (a *App) UpdateVehicle(vehicle Vehicle) error {
 	return nil
 }
 
+// DeleteVehicle removes a vehicle. Its records go with it (ON DELETE CASCADE).
+func (a *App) DeleteVehicle(id string) error {
+	_, err := a.db.Exec(`DELETE FROM vehicles WHERE id = ?`, id)
+	return err
+}
+
 func (a *App) GetRecord(vehicle_id, record_id string) (Record, error) {
 	query := "SELECT * FROM records WHERE id = ? AND vehicle_id = ?"
 	row := a.db.QueryRow(query, record_id, vehicle_id)
@@ -178,6 +190,9 @@ func (a *App) GetRecord(vehicle_id, record_id string) (Record, error) {
 	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
 		return Record{}, errors.New("Record not found")
+	}
+	if err != nil {
+		return Record{}, err
 	}
 
 	return r, nil

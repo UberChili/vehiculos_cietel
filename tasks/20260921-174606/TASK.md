@@ -1,6 +1,6 @@
 # create insert technician handler
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 45
 - TAGS:
 

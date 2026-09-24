@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 )
@@ -90,21 +91,32 @@ func CapitalizeFirst(text string) string {
 	return string(runes)
 }
 
+// CapitalizeWords capitalizes every word, for names like "maría josé" -> "María José"
+func CapitalizeWords(text string) string {
+	words := strings.Fields(text)
+	for i, word := range words {
+		words[i] = CapitalizeFirst(word)
+	}
+	return strings.Join(words, " ")
+}
+
 func ValidateVehicleFields(vehicle Vehicle) error {
-	if len(vehicle.Plate) >= 10 {
+	if vehicle.Plate == "" || len(vehicle.Plate) >= 10 {
 		return errors.New("Invalid Plate.")
 	}
-	if !slices.Contains(Makers, vehicle.Maker) {
+	models, ok := ModelsByMaker[vehicle.Maker]
+	if !ok {
 		return errors.New("Marca inválida. No en la lista de Marcas de vehículos.")
 	}
-	if !slices.Contains(Models, vehicle.Model) {
-		return errors.New("Modelo invalido. No en la lista de Modelos de vehículos.")
+	if !slices.Contains(models, vehicle.Model) {
+		return errors.New("Modelo invalido. No es un modelo de esa marca.")
 	}
 	year, err := strconv.Atoi(vehicle.Year)
 	if err != nil {
 		return err
 	}
-	if year >= 2027 || year <= 2009 {
+	// Next year's models are already sold, so allow up to current year + 1
+	if year > time.Now().Year()+1 || year <= 2009 {
 		return errors.New("Invalid Year.")
 	}
 

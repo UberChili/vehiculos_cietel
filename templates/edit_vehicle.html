@@ -217,6 +217,30 @@
             font-size: 0.85rem;
             text-decoration: none;
         }
+
+        /* Same as record.html's delete button */
+        .delete-actions {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .btn-delete {
+            width: 100%;
+            padding: 0.7rem;
+            background: white;
+            color: #e63946;
+            border: 1.5px solid #e63946;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-delete:active {
+            background: #fff0f0;
+        }
     </style>
 </head>
 <body>
@@ -238,13 +262,26 @@
             </div>
 
             <div class="field-row">
+                {{/* Options come from ModelsByMaker in vehicle.go. .Maker and .Model are
+                     stored lowercase, same as the map. If the saved maker isn't in the map,
+                     "Selecciona..." stays selected so it has to be picked again. */}}
                 <div class="field">
                     <label>Marca <span class="required-star">*</span></label>
-                    <input type="text" name="maker" value="{{.Maker}}" placeholder="Chevrolet" required>
+                    <select name="maker" id="makerSelect" required>
+                        <option value="" disabled {{if not (index .ModelsByMaker .Maker)}}selected{{end}}>Selecciona...</option>
+                        {{range $maker, $models := .ModelsByMaker}}
+                        <option value="{{$maker}}" {{if eq $maker $.Maker}}selected{{end}}>{{capitalize $maker}}</option>
+                        {{end}}
+                    </select>
                 </div>
                 <div class="field">
                     <label>Modelo <span class="required-star">*</span></label>
-                    <input type="text" name="model" value="{{.Model}}" placeholder="Spark" required>
+                    <select name="model" id="modelSelect" required>
+                        <option value="" disabled>Selecciona...</option>
+                        {{range index .ModelsByMaker .Maker}}
+                        <option value="{{.}}" {{if eq . $.Model}}selected{{end}}>{{capitalize .}}</option>
+                        {{end}}
+                    </select>
                 </div>
             </div>
 
@@ -297,10 +334,29 @@
             <a href="/vehiculos/{{.ID}}" class="btn-cancel">Cancelar</a>
 
         </form>
+
+        {{/* Its own form: it can't be nested inside the edit form above */}}
+        <div class="delete-actions">
+            <form method="POST" action="/vehiculos/{{.ID}}/eliminar"
+                  onsubmit="return confirm('¿Seguro que deseas eliminar este vehículo? También se eliminarán todos sus registros. Esta acción no se puede deshacer.');">
+                <button type="submit" class="btn-delete">Eliminar vehículo</button>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
+    // Model options depend on the chosen maker (ModelsByMaker in vehicle.go)
+    const modelsByMaker = {{.ModelsByMaker}};
+    const makerSelect = document.getElementById('makerSelect');
+    const modelSelect = document.getElementById('modelSelect');
+    makerSelect.addEventListener('change', function() {
+        modelSelect.innerHTML = '<option value="" disabled selected>Selecciona...</option>';
+        modelsByMaker[makerSelect.value].forEach(function(model) {
+            modelSelect.add(new Option(model.charAt(0).toUpperCase() + model.slice(1), model));
+        });
+    });
+
     document.getElementById('photoInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {

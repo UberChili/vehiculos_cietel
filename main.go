@@ -15,11 +15,12 @@ type App struct {
 }
 
 // ParseTemplates loads every page template with the shared function map
-// (formatDate, isAssignedTo) available to all of them.
+// (formatDate, isAssignedTo, capitalize) available to all of them.
 func ParseTemplates() (*template.Template, error) {
 	return template.New("").Funcs(template.FuncMap{
 		"formatDate":   FormatDateDisplay,
 		"isAssignedTo": IsAssignedTo,
+		"capitalize":   CapitalizeFirst,
 	}).ParseFiles(
 		"templates/index.html",
 		"templates/vehicle.html",
@@ -28,6 +29,7 @@ func ParseTemplates() (*template.Template, error) {
 		"templates/new_record.html",
 		"templates/record.html",
 		"templates/error.html",
+		"templates/new_technician.html",
 	)
 }
 
@@ -56,13 +58,15 @@ func main() {
 	// Serves vehicle photos saved by SavePhoto
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
 	r.Get("/vehiculos/{id}", app.VehicleHandler)
-	r.Post("/vehiculos/{id}", app.VehicleHandler)
 	r.Get("/vehiculos/{id}/editar", app.EditVehicleHandler)
 	r.Post("/vehiculos/{id}/editar", app.EditVehicleHandler)
+	r.Post("/vehiculos/{id}/eliminar", app.DeleteVehicleHandler)
 	r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 	r.Get("/vehiculos/{id}/registro/{record_id}", app.RecordHandler)
 	r.Post("/vehiculos/{id}/registro/{record_id}/eliminar", app.RecordHandler)
 	r.Post("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
+	r.Get("/tecnicos/nuevo", app.NewTechnicianHandler)
+	r.Post("/tecnicos/nuevo", app.NewTechnicianHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new", app.NewVehicleHandler)
 

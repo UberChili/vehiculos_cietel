@@ -17,8 +17,12 @@ type Vehicle struct {
 
 // func (v Vehicle)
 
-var Makers = []string{"chevrolet", "hyundai", "ford"}
-var Models = []string{"spark", "chevy", "ikon", "atos", "courier", "tornado"}
+// Every maker in the fleet and its models, lowercase like they're stored.
+var ModelsByMaker = map[string][]string{
+	"chevrolet": {"spark", "chevy", "tornado"},
+	"hyundai":   {"atos"},
+	"ford":      {"courier", "ikon"},
+}
 
 type Record struct {
 	ID          int

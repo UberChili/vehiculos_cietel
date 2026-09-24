@@ -271,26 +271,45 @@
             outline: none;
             border-color: #e63946;
         }
+
+        .btn-secondary {
+            background: #1a1a2e;
+        }
+
+        /* Technicians view: same cards as the vehicles, on every screen size */
+        .technician-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .technician-list a {
+            color: inherit;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <h1>🚗 Vehículos CIETEL</h1>
-    <span>{{len .}} vehículos</span>
+    <span>{{len .Vehicles}} vehículos</span>
 </header>
 
 <div class="container">
+    <input type="search" id="search" class="search" placeholder="🔍 Buscar placas, marca, técnico...">
+
+    <div id="vehiclesView">
     <div class="toolbar">
         <h2>Lista de vehículos</h2>
-        <a href="/vehiculos/new" class="btn">+ Agregar</a>
+        <div>
+            <button type="button" class="btn btn-secondary" onclick="showView(true)">👤 Técnicos</button>
+            <a href="/vehiculos/new" class="btn">+ Agregar</a>
+        </div>
     </div>
-
-    <input type="search" id="search" class="search" placeholder="🔍 Buscar placas, marca, técnico...">
 
     <!-- Mobile: cards -->
     <div class="vehicle-list">
-        {{range .}}
+        {{range .Vehicles}}
         <a href="/vehiculos/{{.ID}}" class="vehicle-card" data-search="{{.Plate}} {{.Maker}} {{.Model}} {{.AssignedToName}} {{.Location}}">
             <div class="vehicle-icon">🚙</div>
             <div class="vehicle-info">
@@ -321,7 +340,7 @@
                 </tr>
             </thead>
             <tbody>
-                {{range .}}
+                {{range .Vehicles}}
                 <tr data-search="{{.Plate}} {{.Maker}} {{.Model}} {{.AssignedToName}} {{.Location}}">
                     <td class="plate-cell">
                         <a class="row-link" href="/vehiculos/{{.ID}}"></a>
@@ -337,9 +356,51 @@
             </tbody>
         </table>
     </div>
+    </div>
+
+    <div id="techniciansView" hidden>
+    <div class="toolbar">
+        <h2>Lista de técnicos</h2>
+        <div>
+            <button type="button" class="btn btn-secondary" onclick="showView(false)">🚙 Vehículos</button>
+            <a href="/tecnicos/nuevo" class="btn">+ Agregar</a>
+        </div>
+    </div>
+
+    <div class="technician-list">
+        {{range .Technicians}}
+        {{$t := .}}
+        <div class="vehicle-card" data-search="{{.FirstName}} {{.LastName}}{{range $.Vehicles}}{{if isAssignedTo .AssignedTo $t.ID}} {{.Plate}} {{.Maker}} {{.Model}}{{end}}{{end}}">
+            <div class="vehicle-icon">👤</div>
+            <div class="vehicle-info">
+                <div class="vehicle-name">{{.FirstName}} {{.LastName}}</div>
+                <div class="vehicle-meta">
+                    {{$assigned := false}}
+                    {{range $.Vehicles}}{{if isAssignedTo .AssignedTo $t.ID}}
+                    {{$assigned = true}}
+                    <a class="meta-item" href="/vehiculos/{{.ID}}">🚙 <strong>{{.Maker}} {{.Model}}</strong> {{.Plate}}</a>
+                    {{end}}{{end}}
+                    {{if not $assigned}}<span class="meta-item">Sin vehículo asignado</span>{{end}}
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <p class="meta-item">Sin técnicos aún.</p>
+        {{end}}
+    </div>
+    </div>
 </div>
 
 <script>
+    // Swaps between the vehicles list (default) and the technicians list.
+    // "#tecnicos" in the URL opens the technicians one, so other pages can link back to it.
+    function showView(technicians) {
+        document.getElementById("vehiclesView").hidden = technicians;
+        document.getElementById("techniciansView").hidden = !technicians;
+        history.replaceState(null, "", technicians ? "#tecnicos" : location.pathname);
+    }
+    showView(location.hash === "#tecnicos");
+
     // Lowercases and strips accents, so "nunez" matches "Núñez".
     const normalize = text => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 

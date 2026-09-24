@@ -39,13 +39,27 @@ func (a *App) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	// Eventually, get only a number (Not sure how to handle this)
 	vehicles, err := a.findAllVehicles()
 	if err != nil {
-		fmt.Println("Error getting vehicles:", err)
+		log.Println("Error getting vehicles:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar los vehículos.")
 		return
 	}
 
+	// For the technicians view of the index page
+	technicians, err := a.findAllTechnicians()
+	if err != nil {
+		log.Println("Error getting technicians:", err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar los técnicos.")
+		return
+	}
+
+	data := struct {
+		Vehicles    []Vehicle
+		Technicians []Technician
+	}{vehicles, technicians}
+
 	// Render template
 	var buf bytes.Buffer
-	err = a.tmpl.ExecuteTemplate(&buf, "index.html", vehicles)
+	err = a.tmpl.ExecuteTemplate(&buf, "index.html", data)
 	if err != nil {
 		log.Println("Error rendering index.html:", err)
 		a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
@@ -70,6 +84,9 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 		vehicle.Maker = CapitalizeFirst(vehicle.Maker)
 		vehicle.Model = CapitalizeFirst(vehicle.Model)
 		vehicle.Location = CapitalizeFirst(vehicle.Location)
+		if vehicle.AssignedTo != nil { // otherwise it's "Sin asignar"
+			vehicle.AssignedToName = CapitalizeWords(vehicle.AssignedToName)
+		}
 
 		// We first try executing the template and outputting to a buffer
 		// Don't remember why but this is safer than trying to send directly to the writer
@@ -96,7 +113,12 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var buf bytes.Buffer
-		err = a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", struct{ Technicians []Technician }{technicians})
+		data := struct {
+			Technicians   []Technician
+			ModelsByMaker map[string][]string
+		}{technicians, ModelsByMaker}
+
+		err = a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
@@ -179,11 +201,12 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// edit_vehicle.html reads the vehicle fields and .Technicians at the same level
+		// edit_vehicle.html reads the vehicle fields, .Technicians and .ModelsByMaker at the same level
 		data := struct {
 			Vehicle
-			Technicians []Technician
-		}{vehicle, technicians}
+			Technicians   []Technician
+			ModelsByMaker map[string][]string
+		}{vehicle, technicians, ModelsByMaker}
 
 		var buf bytes.Buffer
 		err = a.tmpl.ExecuteTemplate(&buf, "edit_vehicle.html", data)
@@ -271,6 +294,32 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a App) DeleteVehicleHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	// Needed first to know which photo file to remove afterwards
+	vehicle, v_err := a.GetVehicle(id)
+	if v_err != nil {
+		log.Printf("Error getting vehicle with id: %s: %s\n", id, v_err)
+		a.RenderError(w, http.StatusNotFound, "Error del servidor.", "No se encontró el vehículo.")
+		return
+	}
+
+	// Its records are deleted by the database too (ON DELETE CASCADE)
+	delete_err := a.DeleteVehicle(id)
+	if delete_err != nil {
+		log.Printf("Error deleting vehicle %s: %s\n", id, delete_err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al intentar eliminar el vehículo.")
+		return
+	}
+
+	if vehicle.PhotoURL != "" {
+		os.Remove(strings.TrimPrefix(vehicle.PhotoURL, "/"))
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func (a App) RecordHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		log.Println("GET called on RecordHandler")
@@ -330,10 +379,12 @@ func (a App) RecordHandler(w http.ResponseWriter, r *http.Request) {
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al intentar eliminar el registro.")
 			return
 		}
-		if result >= 1 {
-			vehicle_page_url := fmt.Sprintf("/vehiculos/%s", chi.URLParam(r, "id"))
-			http.Redirect(w, r, vehicle_page_url, http.StatusSeeOther)
+		if result == 0 {
+			a.RenderError(w, http.StatusNotFound, "Registro no encontrado.", "El registro que intentas eliminar no existe.")
+			return
 		}
+		vehicle_page_url := fmt.Sprintf("/vehiculos/%s", chi.URLParam(r, "id"))
+		http.Redirect(w, r, vehicle_page_url, http.StatusSeeOther)
 	}
 }
 
@@ -380,6 +431,16 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 		description := r.FormValue("description")
 		cost := r.FormValue("cost")
 
+		// Last service/repair are looked up by these exact type names
+		if record_type != "Servicio" && record_type != "Reparación" {
+			a.RenderError(w, http.StatusBadRequest, "Tipo inválido.", "El tipo debe ser Servicio o Reparación.")
+			return
+		}
+		if strings.TrimSpace(description) == "" {
+			a.RenderError(w, http.StatusBadRequest, "Descripción vacía.", "La descripción es obligatoria.")
+			return
+		}
+
 		record := Record{VehicleID: vehicle_id, DateShort: date.Format("2006-01-02"), Type: record_type, Description: description, Cost: cost}
 		log.Println(record)
 
@@ -393,5 +454,44 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 		// r.Get("/vehiculos/{id}/nuevo-registro", app.NewRecordHandler)
 		vehicle_page_url := fmt.Sprintf("/vehiculos/%s", chi.URLParam(r, "id"))
 		http.Redirect(w, r, vehicle_page_url, http.StatusSeeOther)
+	}
+}
+
+func (a *App) NewTechnicianHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		log.Println("GET called on NewTechnicianHandler")
+
+		var buf bytes.Buffer
+		var technician Technician
+		if err := a.tmpl.ExecuteTemplate(&buf, "new_technician.html", technician); err != nil {
+			log.Println("Error rendering new_technician.html:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+		buf.WriteTo(w)
+	}
+
+	if r.Method == http.MethodPost {
+		log.Println("POST called on NewTechnicianHandler")
+
+		// Extra spaces removed and lowercased so " Juan" and "juan" don't end up as two
+		// different spellings. Capitalized again when read from the database for display.
+		technician := Technician{
+			FirstName: strings.ToLower(strings.Join(strings.Fields(r.FormValue("first_name")), " ")),
+			LastName:  strings.ToLower(strings.Join(strings.Fields(r.FormValue("last_name")), " ")),
+		}
+		if technician.FirstName == "" || technician.LastName == "" {
+			a.RenderError(w, http.StatusBadRequest, "Datos inválidos.", "El nombre y el apellido son obligatorios.")
+			return
+		}
+
+		insert_err := a.InsertNewTechnician(technician)
+		if insert_err != nil {
+			log.Println("Error inserting technician:", insert_err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Error al agregar técnico.")
+			return
+		}
+		// back to the technicians view of the index page
+		http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)
 	}
 }

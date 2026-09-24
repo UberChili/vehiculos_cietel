@@ -1,6 +1,6 @@
 # Create form to insert technicians
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS:
 

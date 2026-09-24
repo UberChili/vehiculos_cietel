@@ -207,13 +207,22 @@
             </div>
 
             <div class="field-row">
+                {{/* Options come from ModelsByMaker in vehicle.go. The models are
+                     filled in by the script below once a maker is chosen. */}}
                 <div class="field">
                     <label>Marca <span class="required-star">*</span></label>
-                    <input type="text" name="maker" placeholder="Chevrolet" required>
+                    <select name="maker" id="makerSelect" required>
+                        <option value="" disabled selected>Selecciona...</option>
+                        {{range $maker, $models := .ModelsByMaker}}
+                        <option value="{{$maker}}">{{capitalize $maker}}</option>
+                        {{end}}
+                    </select>
                 </div>
                 <div class="field">
                     <label>Modelo <span class="required-star">*</span></label>
-                    <input type="text" name="model" placeholder="Spark" required>
+                    <select name="model" id="modelSelect" required>
+                        <option value="" disabled selected>Elige la marca</option>
+                    </select>
                 </div>
             </div>
 
@@ -260,6 +269,17 @@
 </div>
 
 <script>
+    // Model options depend on the chosen maker (ModelsByMaker in vehicle.go)
+    const modelsByMaker = {{.ModelsByMaker}};
+    const makerSelect = document.getElementById('makerSelect');
+    const modelSelect = document.getElementById('modelSelect');
+    makerSelect.addEventListener('change', function() {
+        modelSelect.innerHTML = '<option value="" disabled selected>Selecciona...</option>';
+        modelsByMaker[makerSelect.value].forEach(function(model) {
+            modelSelect.add(new Option(model.charAt(0).toUpperCase() + model.slice(1), model));
+        });
+    });
+
     document.getElementById('photoInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {

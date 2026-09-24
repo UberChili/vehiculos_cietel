@@ -304,7 +304,16 @@
 
             <div class="field">
                 <label>Ubicación actual</label>
-                <input type="text" name="location" value="{{.Location}}" placeholder="Morelia, Michoacán">
+                {{/* Options come from CitiesByState in vehicle.go, stored as "City, State" */}}
+                <select name="location">
+                    <option value="">Sin ubicación</option>
+                    {{range $state, $cities := .CitiesByState}}
+                    {{range $cities}}
+                    {{$location := printf "%s, %s" . $state}}
+                    <option value="{{$location}}" {{if eq $location $.Location}}selected{{end}}>{{$location}}</option>
+                    {{end}}
+                    {{end}}
+                </select>
             </div>
 
             <div class="field">

@@ -283,7 +283,7 @@
                 <div class="maintenance-body">
                     <div class="maintenance-type">{{.Type}}</div>
                     <div class="maintenance-desc">{{.Description}}</div>
-                    {{if .Cost}}<div class="maintenance-cost">💰 ${{.Cost}}</div>{{end}}
+                    {{if .Cost}}<div class="maintenance-cost">💰 ${{formatCost .Cost}}</div>{{end}}
                 </div>
                 <span class="maintenance-chevron">›</span>
             </a>

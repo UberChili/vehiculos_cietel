@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
@@ -36,7 +37,7 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 				date TEXT NOT NULL,
 				type TEXT NOT NULL,
 				description TEXT NOT NULL,
-				cost TEXT DEFAULT ''
+				cost INTEGER
 				);`
 	_, err = db.Exec(technicians_table_stmt)
 	if err != nil {
@@ -49,6 +50,13 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 	_, err = db.Exec(records_table_stmt)
 	if err != nil {
 		return nil, fmt.Errorf("error creating records table: %w", err)
+	}
+	// Plates are unique, ignoring dashes and spaces ("DCE-456" = "DCE 456" = "DCE456")
+	plate_index_stmt := `CREATE UNIQUE INDEX IF NOT EXISTS vehicles_plate_unique
+				ON vehicles (replace(replace(plate, '-', ''), ' ', ''));`
+	_, err = db.Exec(plate_index_stmt)
+	if err != nil {
+		return nil, fmt.Errorf("error creating plates index: %w", err)
 	}
 
 	log.Println("Succesfully opened tables.")
@@ -84,7 +92,6 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 
 		v.Maker = CapitalizeFirst(v.Maker)
 		v.Model = CapitalizeFirst(v.Model)
-		v.Location = CapitalizeFirst(v.Location)
 		if v.AssignedTo != nil { // otherwise it's "Sin asignar"
 			v.AssignedToName = CapitalizeWords(v.AssignedToName)
 		}
@@ -149,6 +156,10 @@ func (a *App) InsertNewVehicle(vehicle Vehicle) error {
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			// Two UNIQUE rules on vehicles: the plate index and assigned_to
+			if strings.Contains(err.Error(), "vehicles_plate_unique") {
+				return errors.New("Ya existe un vehículo con esas placas")
+			}
 			return errors.New("El Técnico seleccionado ya tiene un vehículo asignado")
 		}
 		return err
@@ -166,6 +177,10 @@ func (a *App) UpdateVehicle(vehicle Vehicle) error {
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			// Two UNIQUE rules on vehicles: the plate index and assigned_to
+			if strings.Contains(err.Error(), "vehicles_plate_unique") {
+				return errors.New("Ya existe un vehículo con esas placas")
+			}
 			return errors.New("El Técnico seleccionado ya tiene un vehículo asignado")
 		}
 		return err
@@ -229,6 +244,14 @@ func (a *App) InsertNewRecord(record Record) error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) UpdateRecord(record Record) error {
+	stmt := `UPDATE records SET date = ?, type = ?, description = ?, cost = ?
+			WHERE id = ? AND vehicle_id = ?`
+
+	_, err := a.db.Exec(stmt, record.DateShort, record.Type, record.Description, record.Cost, record.ID, record.VehicleID)
+	return err
 }
 
 func (a *App) DeleteRecord(vehicle_id, record_id string) (int64, error) {

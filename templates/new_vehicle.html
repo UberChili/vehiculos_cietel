@@ -239,7 +239,7 @@
                 <select name="assigned_to">
                     <option value="">Sin asignar</option>
                     {{range .Technicians}}
-                    <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
+                    {{if .Active}}<option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>{{end}}
                     {{end}}
                 </select>
             </div>

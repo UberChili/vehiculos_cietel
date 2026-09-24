@@ -115,6 +115,29 @@
             color: #e63946;
         }
 
+        /* Same checkbox style as edit_vehicle.html, plus appearance: auto so the
+           -webkit-appearance: none of the inputs above doesn't hide the box */
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem 0 0;
+            font-size: 0.85rem;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: normal;
+            color: #555;
+        }
+
+        .checkbox-field input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            padding: 0;
+            -webkit-appearance: auto;
+            appearance: auto;
+            accent-color: #e63946;
+        }
+
         .field-hint {
             font-size: 0.75rem;
             color: #999;
@@ -176,7 +199,7 @@
 
 <div class="container">
     <div class="card">
-        <form action="/vehiculos/{{.VehicleID}}/nuevo-registro" method="POST">
+        <form action="/vehiculos/{{.VehicleID}}/nuevo-registro" method="POST" id="recordForm">
 
             <p class="required-note"><span>*</span> Campo obligatorio</p>
 
@@ -198,15 +221,42 @@
                 </div>
             </div>
 
+            {{/* Only for repairs: shown and required when Tipo is Reparación (see the script below) */}}
+            <div class="field" id="causeField" hidden>
+                <label>Causa de la reparación <span class="required-star">*</span></label>
+                <select name="cause" id="causeSelect">
+                    <option value="" disabled selected>Selecciona...</option>
+                    {{range .RepairCauses}}
+                    <option value="{{.}}">{{.}}</option>
+                    {{end}}
+                </select>
+            </div>
+
             <div class="field">
                 <label>Descripción <span class="required-star">*</span></label>
                 <p id="repairTip" class="tip-box">💡 Recuerda agregar notas que consideres importantes. ¿Fue con otro mecánico? ¿Algo fuera de lo común?</p>
                 <textarea name="description" placeholder="Cambio de aceite y filtros" required></textarea>
+                <p class="field-hint">¿Se cambiaron bandas? Escribe "bandas" en la descripción para que el sistema lleve la cuenta.</p>
             </div>
 
             <div class="field">
                 <label>Costo</label>
                 <input type="number" name="cost" placeholder="0.00" min="0" step="0.01">
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label>Kilometraje</label>
+                    <input type="number" name="odometer_km" id="kmInput" placeholder="123456" min="0" step="1" inputmode="numeric">
+                    <label class="checkbox-field">
+                        <input type="checkbox" name="odometer_broken" id="odometerBroken">
+                        El odómetro no funciona
+                    </label>
+                </div>
+                <div class="field">
+                    <label>Días sin poder usarse</label>
+                    <input type="number" name="downtime_days" placeholder="0" min="0" max="365" step="1" inputmode="numeric">
+                </div>
             </div>
 
             <button type="submit" class="btn-submit">Guardar registro</button>
@@ -218,7 +268,35 @@
 
 <script>
     document.getElementById('typeSelect').addEventListener('change', function(e) {
-        document.getElementById('repairTip').classList.toggle('visible', e.target.value === 'Reparación');
+        var repair = e.target.value === 'Reparación';
+        document.getElementById('repairTip').classList.toggle('visible', repair);
+        document.getElementById('causeField').hidden = !repair;
+        document.getElementById('causeSelect').required = repair;
+    });
+
+    // "El odómetro no funciona" disables and empties the km field
+    var kmInput = document.getElementById('kmInput');
+    document.getElementById('odometerBroken').addEventListener('change', function(e) {
+        kmInput.disabled = e.target.checked;
+        if (e.target.checked) kmInput.value = '';
+    });
+
+    // Warns (doesn't block) when the km doesn't fit this vehicle's other readings:
+    // lower than an earlier one or higher than a later one. Usually a typo, sometimes
+    // an odometer that was replaced or is failing. Readings come from the database.
+    var readings = {{.Readings}} || [];
+    document.getElementById('recordForm').addEventListener('submit', function(e) {
+        var km = parseInt(kmInput.value, 10);
+        var parts = document.getElementById('dateInput').value.split('-'); // dd-mm-aaaa
+        if (kmInput.disabled || isNaN(km) || parts.length !== 3) return;
+        var date = parts[2] + '-' + parts[1] + '-' + parts[0];            // ISO, like the stored dates
+        var odd = readings.find(function(r) {
+            return (r.Date < date && km < r.Km) || (r.Date > date && km > r.Km);
+        });
+        if (odd && !confirm('El kilometraje (' + km + ' km) no cuadra con el registro del ' +
+                odd.Date.split('-').reverse().join('-') + ' (' + odd.Km + ' km). ¿Guardar de todos modos?')) {
+            e.preventDefault();
+        }
     });
 
     // Auto-inserts the dashes as digits are typed (02092026 -> 02-09-2026),

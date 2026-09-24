@@ -160,6 +160,27 @@
         .btn-delete:active {
             background: #fff0f0;
         }
+
+        /* "Dar de baja" / "Reactivar": can be undone, so less alarming than delete */
+        .btn-status {
+            width: 100%;
+            padding: 0.7rem;
+            margin-bottom: 0.6rem;
+            background: white;
+            color: #1a1a2e;
+            border: 1.5px solid #1a1a2e;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+        }
+
+        .action-hint {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -192,12 +213,26 @@
 
         </form>
 
-        {{/* Its own form: it can't be nested inside the edit form above */}}
+        {{/* Their own forms: they can't be nested inside the edit form above */}}
         <div class="delete-actions">
+            {{if .Active}}
+            <form method="POST" action="/tecnicos/{{.ID}}/baja"
+                  onsubmit="return confirm('¿Dar de baja a este técnico? Si tiene un vehículo asignado, el vehículo quedará Sin asignar. Sus registros se conservan y se puede reactivar después.');">
+                <button type="submit" class="btn-status">Dar de baja</button>
+            </form>
+            <p class="action-hint">Para quien ya no trabaja con nosotros. Conserva su historial de servicios y reparaciones.</p>
+            {{else}}
+            <form method="POST" action="/tecnicos/{{.ID}}/reactivar">
+                <button type="submit" class="btn-status">Reactivar técnico</button>
+            </form>
+            <p class="action-hint">Está dado de baja: no se le puede asignar un vehículo hasta reactivarlo.</p>
+            {{end}}
+
             <form method="POST" action="/tecnicos/{{.ID}}/eliminar"
-                  onsubmit="return confirm('¿Seguro que deseas eliminar este técnico? Si tiene un vehículo asignado, el vehículo quedará Sin asignar. Esta acción no se puede deshacer.');">
+                  onsubmit="return confirm('¿Seguro que deseas eliminar este técnico? Esta acción no se puede deshacer.');">
                 <button type="submit" class="btn-delete">Eliminar técnico</button>
             </form>
+            <p class="action-hint">Solo para técnicos dados de alta por error: no se puede eliminar a quien ya tiene registros a su nombre.</p>
         </div>
     </div>
 </div>

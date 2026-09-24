@@ -80,5 +80,8 @@ func main() {
 	r.Post("/vehiculos/new", app.NewVehicleHandler)
 
 	log.Println("Server running and listening on localhost:8081")
-	_ = http.ListenAndServe(":8081", r)
+	// Only reachable from this machine: on the server, nginx is the one that
+	// talks to it (and asks for the password). log.Fatal so a busy port or any
+	// other startup error stops the program loudly instead of exiting silently.
+	log.Fatal(http.ListenAndServe("127.0.0.1:8081", r))
 }

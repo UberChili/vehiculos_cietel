@@ -170,6 +170,10 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
 			return
 		}
+		if assign_err := a.CheckTechnicianAssignable(vehicle.AssignedTo); assign_err != nil {
+			a.RenderError(w, http.StatusBadRequest, "Técnico inválido.", assign_err.Error())
+			return
+		}
 		// Insert
 		insert_err := a.InsertNewVehicle(vehicle)
 		if insert_err != nil {
@@ -252,6 +256,10 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("Error in Form values. Invalid vehicle fields: ", vehicle_validation_err)
 			message := fmt.Sprintf("Valores de vehículo inválidos: %s\n", vehicle_validation_err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", message)
+			return
+		}
+		if assign_err := a.CheckTechnicianAssignable(vehicle.AssignedTo); assign_err != nil {
+			a.RenderError(w, http.StatusBadRequest, "Técnico inválido.", assign_err.Error())
 			return
 		}
 
@@ -400,9 +408,24 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// For the form's warning when the km doesn't fit the vehicle's other readings
+		readings, err := a.GetOdometerReadings(chi.URLParam(r, "id"), 0)
+		if err != nil {
+			log.Println("Error getting odometer readings:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+
+		// new_record.html reads the Record fields, .Readings and .RepairCauses at the same level
+		data := struct {
+			Record
+			Readings     []OdometerReading
+			RepairCauses []string
+		}{Record{VehicleID: vehicle_id}, readings, RepairCauses}
+
 		// Display form for new record
 		var buf bytes.Buffer
-		err := a.tmpl.ExecuteTemplate(&buf, "new_record.html", Record{VehicleID: vehicle_id})
+		err = a.tmpl.ExecuteTemplate(&buf, "new_record.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
 			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
@@ -492,8 +515,23 @@ func (a App) EditRecordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
+		// Leaves this record out, so its own current km doesn't count as a conflict
+		readings, err := a.GetOdometerReadings(id, record.ID)
+		if err != nil {
+			log.Println("Error getting odometer readings:", err)
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			return
+		}
+
+		// edit_record.html reads the Record fields, .Readings and .RepairCauses at the same level
+		data := struct {
+			Record
+			Readings     []OdometerReading
+			RepairCauses []string
+		}{record, readings, RepairCauses}
+
 		var buf bytes.Buffer
-		err = a.tmpl.ExecuteTemplate(&buf, "edit_record.html", record)
+		err = a.tmpl.ExecuteTemplate(&buf, "edit_record.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
 			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
@@ -569,10 +607,51 @@ func (a *App) DeleteTechnicianHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// With records attributed to them, deleting would erase who had those vehicles:
+	// "dar de baja" is the way to go (see SetTechnicianActive)
+	count, err := a.CountTechnicianRecords(id)
+	if err != nil {
+		log.Printf("Error counting records of technician %s: %s\n", id, err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al intentar eliminar el técnico.")
+		return
+	}
+	if count > 0 {
+		message := fmt.Sprintf("Tiene %d registro(s) de servicios o reparaciones a su nombre. Para no perder ese historial, dalo de baja en lugar de eliminarlo.", count)
+		a.RenderError(w, http.StatusConflict, "No se puede eliminar este técnico.", message)
+		return
+	}
+
 	// Their vehicle, if any, is left "Sin asignar" (see DeleteTechnician)
 	if err := a.DeleteTechnician(id); err != nil {
 		log.Printf("Error deleting technician %s: %s\n", id, err)
 		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al intentar eliminar el técnico.")
+		return
+	}
+	http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)
+}
+
+// DeactivateTechnicianHandler "da de baja" a technician, and ReactivateTechnicianHandler
+// undoes it. Both only change the active flag (see SetTechnicianActive).
+func (a *App) DeactivateTechnicianHandler(w http.ResponseWriter, r *http.Request) {
+	a.setTechnicianActive(w, r, false)
+}
+
+func (a *App) ReactivateTechnicianHandler(w http.ResponseWriter, r *http.Request) {
+	a.setTechnicianActive(w, r, true)
+}
+
+func (a *App) setTechnicianActive(w http.ResponseWriter, r *http.Request, active bool) {
+	id := chi.URLParam(r, "id")
+
+	if _, err := a.GetTechnician(id); err != nil {
+		log.Printf("Error getting technician with id: %s: %s\n", id, err)
+		a.RenderError(w, http.StatusNotFound, "Técnico no encontrado.", "No se encontró el técnico.")
+		return
+	}
+
+	if err := a.SetTechnicianActive(id, active); err != nil {
+		log.Printf("Error setting technician %s active=%t: %s\n", id, active, err)
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cambiar el estado del técnico.")
 		return
 	}
 	http.Redirect(w, r, "/#tecnicos", http.StatusSeeOther)

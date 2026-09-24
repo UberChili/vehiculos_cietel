@@ -263,6 +263,37 @@
         </div>
         {{end}}
 
+        {{if .Record.Cause}}
+        <div class="record-section">
+            <label>Causa</label>
+            <p class="record-description">{{.Record.Cause}}</p>
+        </div>
+        {{end}}
+
+        <div class="record-section">
+            <label>Kilometraje</label>
+            <p class="record-description">
+                {{- if .Record.OdometerBroken}}El odómetro no funciona
+                {{- else if .Record.OdometerKm}}{{.Record.OdometerKm}} km
+                {{- else}}Sin registro{{end -}}
+            </p>
+        </div>
+
+        {{if .Record.DowntimeDays}}
+        <div class="record-section">
+            <label>Días sin poder usarse</label>
+            <p class="record-description">{{.Record.DowntimeDays}}</p>
+        </div>
+        {{end}}
+
+        {{/* Who had the vehicle when this record was created, not who has it now */}}
+        {{if .Record.TechnicianName}}
+        <div class="record-section">
+            <label>Técnico a cargo en ese momento</label>
+            <p class="record-description">{{.Record.TechnicianName}}</p>
+        </div>
+        {{end}}
+
         <div class="record-actions">
             <a href="/vehiculos/{{.Vehicle.ID}}/registro/{{.Record.ID}}/editar" class="btn-edit">Editar registro</a>
             <form method="POST" action="/vehiculos/{{.Vehicle.ID}}/registro/{{.Record.ID}}/eliminar"

@@ -16,12 +16,13 @@ A few things worth noticing on your own once you try it:
 - Where PhotoURL in your Vehicle struct would come from once you handle the upload.
 
 * DONE Insertar reparación o servicio
-* TODO Técnicos [0/3]
+* DONE Técnicos [3/3]
 Now that I think about it, it shouldn't be possible to add two vehicles assigned to the same technician. So, we must check if a vehicle is assigned to a technician before actually assigning it, and this would imply that we need a database/table of all the currently "available" technicians
-** TODO Crear página, posiblemente como opción en la página principal
-*** TODO posiblemente como /tecnicos
-** TODO Crear formulario para insertar técnicos
-** TODO Escribir lógica para insertar técnicos a base de datos
+** DONE Crear página, posiblemente como opción en la página principal
+Quedó como una segunda vista de la página principal (botón "Técnicos", o /#tecnicos).
+** DONE Crear formulario para insertar técnicos
+** DONE Escribir lógica para insertar técnicos a base de datos
+También se pueden editar, dar de baja / reactivar, y eliminar solo si no tienen registros (ver README.md).
 
 * Database (Just a backup)
 CREATE TABLE sqlite_sequence(name,seq);
@@ -31,10 +32,16 @@ CREATE TABLE records (
 				date TEXT NOT NULL,
 				type TEXT NOT NULL,
 				description TEXT NOT NULL,
-				cost INTEGER
+				cost INTEGER,
+				odometer_km INTEGER,
+				odometer_broken INTEGER NOT NULL DEFAULT 0,
+				downtime_days INTEGER,
+				cause TEXT,
+				technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL
 				);
 CREATE UNIQUE INDEX vehicles_plate_unique ON vehicles (replace(replace(plate, '-', ''), ' ', ''));
-CREATE TABLE technicians (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL);
+CREATE TABLE technicians (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
+				active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE vehicles (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 plate TEXT NOT NULL,

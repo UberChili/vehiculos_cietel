@@ -296,8 +296,9 @@
                      Option value is the technician's ID, same as new_vehicle.html. */}}
                 <select name="assigned_to">
                     <option value="" {{if not .AssignedTo}}selected{{end}}>Sin asignar</option>
+                    {{/* Technicians "dados de baja" can't get a vehicle */}}
                     {{range .Technicians}}
-                    <option value="{{.ID}}" {{if isAssignedTo $.AssignedTo .ID}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>
+                    {{if .Active}}<option value="{{.ID}}" {{if isAssignedTo $.AssignedTo .ID}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>{{end}}
                     {{end}}
                 </select>
             </div>

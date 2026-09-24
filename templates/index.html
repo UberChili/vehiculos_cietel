@@ -171,6 +171,17 @@
             color: #6c757d;
         }
 
+        /* Service and bandas badges stacked on the mobile cards */
+        .badges {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.3rem;
+            font-size: 0.65rem;
+            color: #888;
+        }
+
         .chevron {
             color: #ccc;
             font-size: 1.2rem;
@@ -291,6 +302,12 @@
         .technician-list a.meta-item {
             color: inherit;
         }
+
+        /* Technicians "dados de baja": still listed (they can be reactivated), but muted */
+        .technician-list .inactive {
+            opacity: 0.6;
+            border-left-color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -326,7 +343,10 @@
                     <span class="meta-item">🔧 Último servicio: <strong>{{formatDate .LastService}}</strong></span>
                 </div>
             </div>
-            {{template "statusBadge" .LastService}}
+            <div class="badges">
+                <span>Servicio {{template "statusBadge" (serviceStatus .LastService)}}</span>
+                <span>Bandas {{template "statusBadge" (bandasStatus .LastBandas)}}</span>
+            </div>
             <span class="chevron">›</span>
         </a>
         {{end}}
@@ -341,7 +361,8 @@
                     <th>Vehículo</th>
                     <th>Año</th>
                     <th>Último servicio</th>
-                    <th>Estado</th>
+                    <th>Servicio</th>
+                    <th>Bandas</th>
                     <th>Asignado a</th>
                     <th>Ubicación</th>
                 </tr>
@@ -356,7 +377,8 @@
                     <td>{{.Maker}} {{.Model}}</td>
                     <td>{{.Year}}</td>
                     <td>{{formatDate .LastService}}</td>
-                    <td>{{template "statusBadge" .LastService}}</td>
+                    <td>{{template "statusBadge" (serviceStatus .LastService)}}</td>
+                    <td>{{template "statusBadge" (bandasStatus .LastBandas)}}</td>
                     <td>{{.AssignedToName}}</td>
                     <td>{{.Location}}</td>
                 </tr>
@@ -378,10 +400,10 @@
     <div class="technician-list">
         {{range .Technicians}}
         {{$t := .}}
-        <div class="vehicle-card" data-search="{{.FirstName}} {{.LastName}}{{range $.Vehicles}}{{if isAssignedTo .AssignedTo $t.ID}} {{.Plate}} {{.Maker}} {{.Model}}{{end}}{{end}}">
+        <div class="vehicle-card{{if not .Active}} inactive{{end}}" data-search="{{.FirstName}} {{.LastName}}{{range $.Vehicles}}{{if isAssignedTo .AssignedTo $t.ID}} {{.Plate}} {{.Maker}} {{.Model}}{{end}}{{end}}">
             <div class="vehicle-icon">👤</div>
             <div class="vehicle-info">
-                <div class="vehicle-name">{{.FirstName}} {{.LastName}}</div>
+                <div class="vehicle-name">{{.FirstName}} {{.LastName}}{{if not .Active}} (dado de baja){{end}}</div>
                 <div class="vehicle-meta">
                     {{$assigned := false}}
                     {{range $.Vehicles}}{{if isAssignedTo .AssignedTo $t.ID}}
@@ -425,14 +447,14 @@
 </body>
 </html>
 
-{{/* Service status badge for a vehicle, from its last service date.
-     serviceStatus (ServiceStatus in helpers.go) picks the color class. */}}
+{{/* Status badge, given a status from serviceStatus or bandasStatus
+     (ServiceStatus / BandasStatus in helpers.go), which also picks the color class. */}}
 {{define "statusBadge"}}
-{{- $status := serviceStatus . -}}
+{{- $status := . -}}
 <span class="status-badge status-{{$status}}">
     {{- if eq $status "ok"}}Al día
     {{- else if eq $status "warning"}}Próximo
     {{- else if eq $status "overdue"}}Vencido
-    {{- else}}Sin servicio{{end -}}
+    {{- else}}Sin registro{{end -}}
 </span>
 {{- end}}

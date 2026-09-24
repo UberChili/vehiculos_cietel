@@ -1,13 +1,20 @@
 package main
 
+import (
+	"errors"
+	"fmt"
+)
+
 type Technician struct {
 	ID        int
 	FirstName string
 	LastName  string
+	Active    bool // false once "dado de baja": kept for their records' history, but can't get a vehicle
 }
 
 func (a *App) findAllTechnicians() ([]Technician, error) {
-	query := `SELECT id, first_name, last_name FROM technicians ORDER BY last_name`
+	// Active ones first, then the ones "dados de baja"
+	query := `SELECT id, first_name, last_name, active FROM technicians ORDER BY active DESC, last_name`
 
 	rows, err := a.db.Query(query)
 	if err != nil {
@@ -19,7 +26,7 @@ func (a *App) findAllTechnicians() ([]Technician, error) {
 
 	for rows.Next() {
 		t := &Technician{}
-		err := rows.Scan(&t.ID, &t.FirstName, &t.LastName)
+		err := rows.Scan(&t.ID, &t.FirstName, &t.LastName, &t.Active)
 
 		if err != nil {
 			return nil, err
@@ -33,10 +40,10 @@ func (a *App) findAllTechnicians() ([]Technician, error) {
 }
 
 func (a *App) GetTechnician(id string) (Technician, error) {
-	query := `SELECT id, first_name, last_name FROM technicians WHERE id = ?`
+	query := `SELECT id, first_name, last_name, active FROM technicians WHERE id = ?`
 
 	t := Technician{}
-	err := a.db.QueryRow(query, id).Scan(&t.ID, &t.FirstName, &t.LastName)
+	err := a.db.QueryRow(query, id).Scan(&t.ID, &t.FirstName, &t.LastName, &t.Active)
 	if err != nil {
 		return Technician{}, err
 	}
@@ -79,4 +86,52 @@ func (a *App) DeleteTechnician(id string) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// SetTechnicianActive "da de baja" (active = false) or reactivates a technician.
+// Their records keep pointing to them, which is the point: a technician who left
+// is still in the history. Going inactive also leaves their vehicle "Sin asignar",
+// in the same transaction as DeleteTechnician does.
+func (a *App) SetTechnicianActive(id string, active bool) error {
+	tx, err := a.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() // does nothing if Commit already succeeded
+
+	if !active {
+		if _, err := tx.Exec(`UPDATE vehicles SET assigned_to = NULL WHERE assigned_to = ?`, id); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(`UPDATE technicians SET active = ? WHERE id = ?`, active, id); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// CountTechnicianRecords tells how many records are attributed to a technician.
+// A technician with records can only be "dado de baja", not deleted, or those
+// records would lose who had the vehicle.
+func (a *App) CountTechnicianRecords(id string) (int, error) {
+	var count int
+	err := a.db.QueryRow(`SELECT COUNT(*) FROM records WHERE technician_id = ?`, id).Scan(&count)
+	return count, err
+}
+
+// CheckTechnicianAssignable makes sure a vehicle is only assigned to an existing,
+// active technician. The forms only list active ones; this also covers a form
+// left open while someone "dio de baja" that technician.
+func (a *App) CheckTechnicianAssignable(technician_id *int) error {
+	if technician_id == nil { // "Sin asignar"
+		return nil
+	}
+	t, err := a.GetTechnician(fmt.Sprint(*technician_id))
+	if err != nil {
+		return errors.New("El técnico seleccionado no existe.")
+	}
+	if !t.Active {
+		return errors.New("El técnico seleccionado está dado de baja.")
+	}
+	return nil
 }

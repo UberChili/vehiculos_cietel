@@ -15,13 +15,14 @@ type App struct {
 }
 
 // ParseTemplates loads every page template with the shared function map
-// (formatDate, isAssignedTo, capitalize, serviceStatus, formatCost) available to all of them.
+// (formatDate, isAssignedTo, capitalize, serviceStatus, bandasStatus, formatCost) available to all of them.
 func ParseTemplates() (*template.Template, error) {
 	return template.New("").Funcs(template.FuncMap{
 		"formatDate":    FormatDateDisplay,
 		"isAssignedTo":  IsAssignedTo,
 		"capitalize":    CapitalizeFirst,
 		"serviceStatus": ServiceStatus,
+		"bandasStatus":  BandasStatus,
 		"formatCost":    FormatCost,
 	}).ParseFiles(
 		"templates/index.html",
@@ -76,6 +77,8 @@ func main() {
 	r.Get("/tecnicos/{id}/editar", app.EditTechnicianHandler)
 	r.Post("/tecnicos/{id}/editar", app.EditTechnicianHandler)
 	r.Post("/tecnicos/{id}/eliminar", app.DeleteTechnicianHandler)
+	r.Post("/tecnicos/{id}/baja", app.DeactivateTechnicianHandler)
+	r.Post("/tecnicos/{id}/reactivar", app.ReactivateTechnicianHandler)
 	r.Get("/vehiculos/new", app.NewVehicleHandler)
 	r.Post("/vehiculos/new", app.NewVehicleHandler)
 

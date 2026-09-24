@@ -61,27 +61,40 @@ func SavePhoto(r *http.Request) (string, error) {
 	return "/uploads/" + name, nil
 }
 
-// ServiceIntervalDays is how often a vehicle needs a service.
-// PLACEHOLDER: the real interval is still to be decided. It's only here so the
-// status badges on the index page have something to work with.
-const ServiceIntervalDays = 90
+// How often a vehicle needs a general service and a change of bandas.
+// NOT FINAL: these are what the cousin suggested on 2026-09-24 (service every
+// 8 months, bandas every 6), still to be agreed on as a family.
+const ServiceIntervalMonths = 8
+const BandasIntervalMonths = 6
 
-// ServiceDueSoonDays is how many days before its due date a vehicle shows as "Próximo"
-const ServiceDueSoonDays = 15
+// DueSoonDays is how many days before its due date a vehicle shows as "Próximo"
+const DueSoonDays = 15
 
-// ServiceStatus tells how a vehicle is doing on services, from its last service
-// date (ISO, as stored): "ok", "warning" (due soon), "overdue" or "none" (never
-// serviced). The values match the status-* CSS classes of the badges in index.html.
+// ServiceStatus tells how a vehicle is doing on general services, from its last
+// service date (ISO, as stored). See dueStatus for the values.
 func ServiceStatus(lastService string) string {
-	last, err := time.Parse("2006-01-02", lastService)
+	return dueStatus(lastService, ServiceIntervalMonths)
+}
+
+// BandasStatus is the same for the change of bandas, from the last record that
+// mentions them (Vehicle.LastBandas).
+func BandasStatus(lastBandas string) string {
+	return dueStatus(lastBandas, BandasIntervalMonths)
+}
+
+// dueStatus returns "ok", "warning" (due soon), "overdue" or "none" (never done)
+// for something that has to be done every intervalMonths. The values match the
+// status-* CSS classes of the badges in index.html.
+func dueStatus(lastDate string, intervalMonths int) string {
+	last, err := time.Parse("2006-01-02", lastDate)
 	if err != nil {
 		return "none"
 	}
-	due := last.AddDate(0, 0, ServiceIntervalDays)
+	due := last.AddDate(0, intervalMonths, 0)
 	switch {
 	case time.Now().After(due):
 		return "overdue"
-	case time.Now().After(due.AddDate(0, 0, -ServiceDueSoonDays)):
+	case time.Now().After(due.AddDate(0, 0, -DueSoonDays)):
 		return "warning"
 	default:
 		return "ok"
@@ -123,6 +136,33 @@ func ParseRecordForm(r *http.Request) (Record, error) {
 		}
 		cents := int64(math.Round(pesos * 100))
 		record.Cost = &cents
+	}
+
+	// Odometer is optional: several vehicles have a broken one. No reading is
+	// stored as nil (NULL), never as 0
+	record.OdometerBroken = r.FormValue("odometer_broken") != ""
+	if km := strings.TrimSpace(r.FormValue("odometer_km")); km != "" && !record.OdometerBroken {
+		n, err := strconv.Atoi(km)
+		if err != nil || n < 0 || n > 9_999_999 {
+			return Record{}, errors.New("Kilometraje inválido.")
+		}
+		record.OdometerKm = &n
+	}
+
+	if days := strings.TrimSpace(r.FormValue("downtime_days")); days != "" {
+		n, err := strconv.Atoi(days)
+		if err != nil || n < 0 || n > 365 {
+			return Record{}, errors.New("Días sin poder usarse inválidos.")
+		}
+		record.DowntimeDays = &n
+	}
+
+	// Cause only applies to repairs, and there it's required ("No se sabe" is the way out)
+	if record.Type == "Reparación" {
+		record.Cause = r.FormValue("cause")
+		if !slices.Contains(RepairCauses, record.Cause) {
+			return Record{}, errors.New("Selecciona la causa de la reparación.")
+		}
 	}
 	return record, nil
 }

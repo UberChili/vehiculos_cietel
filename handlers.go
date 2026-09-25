@@ -61,7 +61,7 @@ func (a *App) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	err = a.tmpl.ExecuteTemplate(&buf, "index.html", data)
 	if err != nil {
 		log.Println("Error rendering index.html:", err)
-		a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+		a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 		return
 	}
 	fmt.Fprintf(w, "%s", buf.Bytes())
@@ -92,7 +92,7 @@ func (a *App) VehicleHandler(w http.ResponseWriter, r *http.Request) {
 		err := a.tmpl.ExecuteTemplate(&buf, "vehicle.html", vehicle)
 		if err != nil {
 			log.Println("Error rendering vehicle.html: ", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 		// Everything loaded correctly, we can output the template to actual output
@@ -106,7 +106,7 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		technicians, err := a.findAllTechnicians()
 		if err != nil {
 			log.Println("Error loading template:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 
@@ -120,7 +120,7 @@ func (a App) NewVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		err = a.tmpl.ExecuteTemplate(&buf, "new_vehicle.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 
@@ -201,7 +201,7 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		technicians, err := a.findAllTechnicians()
 		if err != nil {
 			log.Println("Error getting technicians:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 
@@ -217,7 +217,7 @@ func (a App) EditVehicleHandler(w http.ResponseWriter, r *http.Request) {
 		err = a.tmpl.ExecuteTemplate(&buf, "edit_vehicle.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 		fmt.Fprintf(w, "%s", buf.Bytes())
@@ -374,7 +374,7 @@ func (a App) RecordHandler(w http.ResponseWriter, r *http.Request) {
 		err = a.tmpl.ExecuteTemplate(&buf, "record.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 		fmt.Fprintf(w, "%s", buf.Bytes())
@@ -428,7 +428,7 @@ func (a App) NewRecordHandler(w http.ResponseWriter, r *http.Request) {
 		err = a.tmpl.ExecuteTemplate(&buf, "new_record.html", data)
 		if err != nil {
 			log.Println("Error loading template:", err)
-			a.RenderError(w, http.StatusBadRequest, "Error del servidor.", "Ocurrió un error al cargar la página.")
+			a.RenderError(w, http.StatusInternalServerError, "Error del servidor.", "Ocurrió un error al cargar la página.")
 			return
 		}
 		fmt.Fprintf(w, "%s", buf.Bytes())

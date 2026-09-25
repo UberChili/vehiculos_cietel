@@ -285,7 +285,7 @@
             <a href="/vehiculos/{{$.ID}}/registro/{{.ID}}" class="maintenance-item">
                 <div class="maintenance-date">{{formatDate .DateShort}}</div>
                 <div class="maintenance-body">
-                    <div class="maintenance-type">{{.Type}}</div>
+                    <div class="maintenance-type">{{.Type}}{{if .BandasChanged}} · Cambio de bandas{{end}}</div>
                     <div class="maintenance-desc">{{.Description}}</div>
                     {{if .Cost}}<div class="maintenance-cost">💰 ${{formatCost .Cost}}</div>{{end}}
                 </div>

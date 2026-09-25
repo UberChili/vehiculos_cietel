@@ -76,8 +76,8 @@ func ServiceStatus(lastService string) string {
 	return dueStatus(lastService, ServiceIntervalMonths)
 }
 
-// BandasStatus is the same for the change of bandas, from the last record that
-// mentions them (Vehicle.LastBandas).
+// BandasStatus is the same for the change of bandas, from the last record marked
+// "Se cambiaron las bandas" (Vehicle.LastBandas).
 func BandasStatus(lastBandas string) string {
 	return dueStatus(lastBandas, BandasIntervalMonths)
 }
@@ -141,6 +141,7 @@ func ParseRecordForm(r *http.Request) (Record, error) {
 	// Odometer is optional: several vehicles have a broken one. No reading is
 	// stored as nil (NULL), never as 0
 	record.OdometerBroken = r.FormValue("odometer_broken") != ""
+	record.BandasChanged = r.FormValue("bandas_changed") != ""
 	if km := strings.TrimSpace(r.FormValue("odometer_km")); km != "" && !record.OdometerBroken {
 		n, err := strconv.Atoi(km)
 		if err != nil || n < 0 || n > 9_999_999 {

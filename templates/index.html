@@ -189,29 +189,25 @@
         }
 
         /* Table for desktop */
-        @media (min-width: 640px) {
-            .vehicle-list {
-                display: none;
-            }
-
-            .vehicle-table-wrap {
-                display: block;
-            }
-        }
-
         .vehicle-table-wrap {
             display: none;
         }
 
         @media (min-width: 640px) {
+            /* Wide enough for every row to fit on one line (see th, td below) */
+            .container {
+                max-width: 1240px;
+            }
             .vehicle-list {
                 display: none;
             }
+            /* overflow-x: on a narrow window the table scrolls sideways
+               instead of wrapping its cells */
             .vehicle-table-wrap {
                 display: block;
                 background: white;
                 border-radius: 10px;
-                overflow: hidden;
+                overflow-x: auto;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             }
         }
@@ -239,6 +235,11 @@
         td {
             padding: 0.85rem 1rem;
             border-bottom: 1px solid #f0f0f0;
+        }
+
+        /* One line per row: no plates, names or badges split in two */
+        th, td {
+            white-space: nowrap;
         }
 
         tr:last-child td {

@@ -56,8 +56,8 @@ servicio o cambio de bandas:
 Cómo se calculan:
 - **Servicio:** a partir del registro de tipo *Servicio* más reciente. Toca
   cada **8 meses**.
-- **Bandas:** a partir del registro más reciente (servicio o reparación) que
-  mencione **"banda" o "bandas"** en su descripción. Toca cada **6 meses**.
+- **Bandas:** a partir del registro más reciente (servicio o reparación)
+  marcado con **"Se cambiaron las bandas"**. Toca cada **6 meses**.
 
 > Los intervalos de 8 y 6 meses son **provisionales**: todavía falta
 > acordarlos. Si cambian, se ajustan en el sistema y las etiquetas se
@@ -171,9 +171,11 @@ de uno al que no se cuida, así que conviene que lo elija **quien autoriza o
 paga la reparación**, no el técnico que usa el vehículo.
 
 **Descripción** \* — Qué se hizo, con el detalle útil: piezas cambiadas, qué
-taller o mecánico lo hizo, y cualquier cosa fuera de lo común. Si se
-cambiaron bandas, **escribe la palabra "bandas"** (por ejemplo, "cambio de
-bandas"): así el sistema sabe cuándo fue el último cambio.
+taller o mecánico lo hizo, y cualquier cosa fuera de lo común.
+
+**Se cambiaron las bandas** — Márcalo si en este servicio o reparación se
+cambiaron las bandas. Es lo único que usa el sistema para saber cuándo fue el
+último cambio de bandas: mencionarlas en la descripción no cuenta.
 
 **Costo** — Lo que se **pagó en total**, en pesos: refacciones + mano de obra,
 con IVA. Sin signo de pesos ni comas (por ejemplo `1850.50`).
@@ -224,11 +226,6 @@ siempre es un error de dedo; revísalo. Si el número es correcto (por
 ejemplo, porque le cambiaron el odómetro), confirma y explícalo en la
 descripción. Es solo un aviso: no impide guardar.
 
-### ¿Y si el odómetro marca millas?
-
-Captura siempre **kilómetros**: multiplica las millas por 1.609 y redondea.
-Anótalo en la descripción ("odómetro en millas").
-
 ### ¿Y si el odómetro funciona a veces?
 
 Si en ese momento marca un número creíble, captúralo. Si no, marca "El
@@ -248,11 +245,8 @@ la descripción que el técnico tuvo otro vehículo mientras tanto.
 
 ### Se cambiaron las bandas pero la etiqueta "Bandas" no cambió
 
-La descripción tiene que incluir la palabra **"banda" o "bandas"**. Edita el
-registro y agrégala (por ejemplo, "Servicio general con cambio de bandas").
-
-Ojo: cualquier descripción con esa palabra cuenta, incluso "no se cambiaron
-las bandas". Evita mencionarlas si no se cambiaron.
+Falta marcar **"Se cambiaron las bandas"** en el registro. Edítalo y marca
+la casilla.
 
 ### ¿Por qué un registro no tiene "Técnico a cargo"?
 

@@ -279,6 +279,13 @@
             </p>
         </div>
 
+        {{if .Record.BandasChanged}}
+        <div class="record-section">
+            <label>Bandas</label>
+            <p class="record-description">Se cambiaron las bandas</p>
+        </div>
+        {{end}}
+
         {{if .Record.DowntimeDays}}
         <div class="record-section">
             <label>Días sin poder usarse</label>

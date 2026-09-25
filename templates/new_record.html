@@ -236,7 +236,11 @@
                 <label>Descripción <span class="required-star">*</span></label>
                 <p id="repairTip" class="tip-box">💡 Recuerda agregar notas que consideres importantes. ¿Fue con otro mecánico? ¿Algo fuera de lo común?</p>
                 <textarea name="description" placeholder="Cambio de aceite y filtros" required></textarea>
-                <p class="field-hint">¿Se cambiaron bandas? Escribe "bandas" en la descripción para que el sistema lleve la cuenta.</p>
+                {{/* Marks the change of bandas the Bandas badge counts from (see BandasStatus) */}}
+                <label class="checkbox-field">
+                    <input type="checkbox" name="bandas_changed">
+                    Se cambiaron las bandas
+                </label>
             </div>
 
             <div class="field">

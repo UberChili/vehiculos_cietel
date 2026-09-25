@@ -8,7 +8,7 @@ type Vehicle struct {
 	Year           string
 	LastService    string
 	LastRepair     string
-	LastBandas     string // last record mentioning "banda(s)" in its description
+	LastBandas     string // last record with BandasChanged
 	AssignedTo     *int
 	AssignedToName string
 	Location       string
@@ -46,6 +46,7 @@ type Record struct {
 	OdometerBroken bool   // "El odómetro no funciona" was checked
 	DowntimeDays   *int   // days the vehicle couldn't be used. nil when not filled in
 	Cause          string // only for repairs, one of RepairCauses. "" for services
+	BandasChanged  bool   // "Se cambiaron las bandas" was checked. The Bandas badge counts from these
 	TechnicianID   *int   // who had the vehicle when the record was created (set automatically)
 	TechnicianName string // for display. "" when nobody had it or the technician was deleted
 }

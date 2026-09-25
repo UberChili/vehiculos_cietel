@@ -37,6 +37,7 @@ CREATE TABLE records (
 				odometer_broken INTEGER NOT NULL DEFAULT 0,
 				downtime_days INTEGER,
 				cause TEXT,
+				bandas_changed INTEGER NOT NULL DEFAULT 0,
 				technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL
 				);
 CREATE UNIQUE INDEX vehicles_plate_unique ON vehicles (replace(replace(plate, '-', ''), ' ', ''));

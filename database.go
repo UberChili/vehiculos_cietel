@@ -43,6 +43,7 @@ func InitDBandCreateOrOpenTables() (*sql.DB, error) {
 				odometer_broken INTEGER NOT NULL DEFAULT 0,
 				downtime_days INTEGER,
 				cause TEXT,
+				bandas_changed INTEGER NOT NULL DEFAULT 0,
 				technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL
 				);`
 	_, err = db.Exec(technicians_table_stmt)
@@ -76,7 +77,7 @@ func (a App) findAllVehicles() ([]Vehicle, error) {
 			COALESCE((SELECT MAX(date) FROM records
 					WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service,
 			COALESCE((SELECT MAX(date) FROM records
-					WHERE vehicle_id = v.id AND description LIKE '%banda%'), '') AS last_bandas
+					WHERE vehicle_id = v.id AND bandas_changed = 1), '') AS last_bandas
 			FROM vehicles v
 			LEFT JOIN technicians t ON v.assigned_to = t.id
 			ORDER BY v.location`
@@ -116,10 +117,9 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 						WHERE vehicle_id = v.id AND type = 'Servicio'), '') AS last_service,
 				COALESCE((SELECT MAX(date) FROM records
 						WHERE vehicle_id = v.id AND type = 'Reparación'), '') AS last_repair,
-				-- Any record (service or repair) whose description mentions "banda" or "bandas".
-				-- LIKE ignores upper/lowercase, so "Cambio de Bandas" counts too.
+				-- Any record (service or repair) marked "Se cambiaron las bandas"
 				COALESCE((SELECT MAX(date) FROM records
-						WHERE vehicle_id = v.id AND description LIKE '%banda%'), '') AS last_bandas,
+						WHERE vehicle_id = v.id AND bandas_changed = 1), '') AS last_bandas,
 				v.photo_url
 				FROM vehicles v
 				LEFT JOIN technicians t ON v.assigned_to = t.id
@@ -139,7 +139,7 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 		return Vehicle{}, err
 	}
 
-	records_rows, err := a.db.Query("SELECT id, date, type, description, cost FROM records WHERE vehicle_id = ? ORDER BY date DESC", id)
+	records_rows, err := a.db.Query("SELECT id, date, type, description, cost, bandas_changed FROM records WHERE vehicle_id = ? ORDER BY date DESC", id)
 	if err != nil {
 		v.Records = nil
 		return v, err
@@ -147,7 +147,7 @@ func (a App) GetVehicle(id string) (Vehicle, error) {
 
 	for records_rows.Next() {
 		r := &Record{}
-		err := records_rows.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost)
+		err := records_rows.Scan(&r.ID, &r.DateShort, &r.Type, &r.Description, &r.Cost, &r.BandasChanged)
 
 		if err != nil {
 			continue
@@ -209,7 +209,7 @@ func (a *App) DeleteVehicle(id string) error {
 func (a *App) GetRecord(vehicle_id, record_id string) (Record, error) {
 	query := `SELECT r.id, r.vehicle_id, r.date, r.type, r.description, r.cost,
 				r.odometer_km, r.odometer_broken, r.downtime_days, COALESCE(r.cause, ''),
-				r.technician_id, COALESCE(t.first_name || ' ' || t.last_name, '')
+				r.bandas_changed, r.technician_id, COALESCE(t.first_name || ' ' || t.last_name, '')
 				FROM records r
 				LEFT JOIN technicians t ON r.technician_id = t.id
 				WHERE r.id = ? AND r.vehicle_id = ?`
@@ -219,7 +219,7 @@ func (a *App) GetRecord(vehicle_id, record_id string) (Record, error) {
 
 	err := row.Scan(&r.ID, &r.VehicleID, &r.DateShort, &r.Type, &r.Description, &r.Cost,
 		&r.OdometerKm, &r.OdometerBroken, &r.DowntimeDays, &r.Cause,
-		&r.TechnicianID, &r.TechnicianName)
+		&r.BandasChanged, &r.TechnicianID, &r.TechnicianName)
 
 	// Not neccessarily an error, but no results
 	if err == sql.ErrNoRows {
@@ -263,14 +263,14 @@ func (a *App) InsertNewRecord(record Record) error {
 	// NULLIF stores services' empty cause as NULL instead of ''.
 	stmt := `INSERT INTO records (
 			vehicle_id, date, type, description, cost,
-			odometer_km, odometer_broken, downtime_days, cause, technician_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''),
+			odometer_km, odometer_broken, downtime_days, cause, bandas_changed, technician_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?,
 				CASE WHEN ? >= date('now', ?)
 					THEN (SELECT assigned_to FROM vehicles WHERE id = ?) END)`
 
 	max_age := fmt.Sprintf("-%d days", TechnicianSnapshotMaxDays)
 	_, err := a.db.Exec(stmt, record.VehicleID, record.DateShort, record.Type, record.Description, record.Cost,
-		record.OdometerKm, record.OdometerBroken, record.DowntimeDays, record.Cause,
+		record.OdometerKm, record.OdometerBroken, record.DowntimeDays, record.Cause, record.BandasChanged,
 		record.DateShort, max_age, record.VehicleID)
 	if err != nil {
 		return err
@@ -281,12 +281,13 @@ func (a *App) InsertNewRecord(record Record) error {
 func (a *App) UpdateRecord(record Record) error {
 	// technician_id is left as it was: it records who had the vehicle back then
 	stmt := `UPDATE records SET date = ?, type = ?, description = ?, cost = ?,
-			odometer_km = ?, odometer_broken = ?, downtime_days = ?, cause = NULLIF(?, '')
+			odometer_km = ?, odometer_broken = ?, downtime_days = ?, cause = NULLIF(?, ''),
+			bandas_changed = ?
 			WHERE id = ? AND vehicle_id = ?`
 
 	_, err := a.db.Exec(stmt, record.DateShort, record.Type, record.Description, record.Cost,
 		record.OdometerKm, record.OdometerBroken, record.DowntimeDays, record.Cause,
-		record.ID, record.VehicleID)
+		record.BandasChanged, record.ID, record.VehicleID)
 	return err
 }
 

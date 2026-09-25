@@ -229,7 +229,7 @@ func ValidateVehicleFields(vehicle Vehicle) error {
 		return err
 	}
 	// Next year's models are already sold, so allow up to current year + 1
-	if year > time.Now().Year()+1 || year <= 2009 {
+	if year > time.Now().Year()+1 || year <= 2000 {
 		return errors.New("Invalid Year.")
 	}
 	// Location is optional, but when set it must be "City, State" from CitiesByState

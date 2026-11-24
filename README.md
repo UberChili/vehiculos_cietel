@@ -1,5 +1,98 @@
 # Vehículos CIETEL
 
+**English summary below · [Documentación en español ↓](#vehículos-cietel-español)**
+
+A fleet-maintenance web app for CIETEL, a Mexican electrical and telecom
+installation company (and my family's business). It tracks the company's
+vehicles, which technician has each one, where they are, and every service
+and repair with its cost, odometer reading, and downtime. It is **in
+production**, used from phones and desktops by the people who manage the
+fleet.
+
+I built it in Go and deployed it myself on a Linux VPS. The interface is in
+Spanish because its users are.
+
+## Features
+
+- Vehicle list (cards on mobile, table on desktop) with accent- and
+  case-insensitive search across plate, make, model, technician, and location
+- **Maintenance status badges**: each vehicle shows whether its general
+  service (every 8 months) and drive-belt change (every 6 months) are up to
+  date, due within 15 days, or overdue, computed from its record history
+- Service and repair records with type, repair cause, cost, odometer, and
+  days out of service; an odometer sanity check warns when a reading doesn't
+  fit the vehicle's earlier and later records
+- Technician management: one vehicle per technician, deactivation that keeps
+  history intact, deletion only for technicians with no records
+- Vehicle photos, uploadable straight from a phone
+
+## Stack
+
+Go · [chi](https://github.com/go-chi/chi) router · SQLite
+([mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)) · server-rendered
+`html/template` · a little vanilla JavaScript for search. No frontend
+framework, no ORM.
+
+## Design decisions
+
+- **Money as integer cents** (`$1,850.50` is stored as `185050`), so sums are
+  exact.
+- **Unknown is not zero.** Cost, odometer, and downtime are `NULL` when
+  unknown and `0` only when they really were zero (e.g. a warranty repair),
+  so future reports don't treat missing data as free.
+- **A technician snapshot per record.** Each record stores who had the vehicle
+  when it was saved, so history stays correct after reassignment. Records
+  dated more than 30 days back are saved without one, so backfilled history
+  doesn't get pinned on whoever has the vehicle today.
+- **Database-enforced integrity**: foreign keys with `ON DELETE CASCADE` /
+  `SET NULL`, a `UNIQUE` constraint so a technician can't hold two vehicles,
+  and a unique expression index so `ABC-123`, `ABC 123`, and `ABC123` count as
+  the same plate.
+- **Fixed lists** for make, model, and city, so the data doesn't fill up
+  with `Chevrolet` / `chevrolet` / `Cevrolet`.
+- **Server-side validation** of every form, and photo uploads checked by
+  their actual bytes (`http.DetectContentType`), not their file extension.
+
+## Deployment
+
+The app runs on a Linux VPS as a systemd service under its own unprivileged
+user. It listens only on `127.0.0.1`, behind an nginx reverse proxy that
+handles HTTPS (Let's Encrypt) and HTTP Basic Auth. The same server hosts
+other sites, which shaped some decisions (for example, moving off port 8080
+after it collided with another service).
+
+## Running locally
+
+Requires Go (version in `go.mod`) and a C compiler, because the SQLite driver
+uses cgo.
+
+```sh
+go run .
+# → http://127.0.0.1:8081
+```
+
+On first run it creates `vehicles.db` and, with the first photo, `uploads/`.
+Both are git-ignored.
+
+## Project layout
+
+| File | Contents |
+|---|---|
+| `main.go` | Routes, template functions, server startup |
+| `handlers.go` | One handler per page or action |
+| `database.go` | Schema creation, vehicle and record queries |
+| `technician.go` | Technician queries |
+| `vehicle.go` | `Vehicle` and `Record` types, fixed lists |
+| `helpers.go` | Validation, photo uploads, dates, costs, status badges |
+| `templates/` | One HTML template per page |
+
+The full route table and the user guide are in the Spanish documentation
+below.
+
+---
+
+# Vehículos CIETEL (español)
+
 Aplicación web para llevar el control de la flotilla de vehículos de CIETEL:
 qué vehículos hay, quién tiene cada uno, dónde están, y el historial de
 servicios y reparaciones de cada uno (con sus costos).
